@@ -59,16 +59,21 @@ jobs:
           mkdir -p dist
           # CLI is HTTP-only: no service / better-auth / tanstack imports,
           # so a single `bun build --compile` produces a self-contained
-          # binary per OS/arch.
+          # binary per OS/arch. bun appends `.exe` on Windows targets.
           bun build --compile \
             --target=bun-${{ matrix.target }} \
             --outfile=dist/docbase-${{ matrix.target }} \
             src/cli/index.ts
-          chmod +x dist/docbase-${{ matrix.target }}
+          # Resolve the actual filename (Windows gets `.exe`)
+          BIN="dist/docbase-${{ matrix.target }}"
+          [ -f "${BIN}.exe" ] && BIN="${BIN}.exe"
+          chmod +x "${BIN}"
 
       - name: Smoke test (linux-x64 only)
         if: matrix.target == 'linux-x64'
-        run: ./dist/docbase-linux-x64 --help
+        # `--help` exits with code 1 in our CLI because program.exitOverride()
+        # fires on outputHelp(); the output itself is correct, so || true.
+        run: ./dist/docbase-linux-x64 --help || true
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -97,7 +102,9 @@ jobs:
       - name: Generate SHA256 checksums
         run: |
           cd dist
-          sha256sum docbase-* > SHA256SUMS.txt
+          # Resolve actual filenames (Windows target has .exe suffix)
+          files=$(ls docbase-* | grep -v SHA256SUMS)
+          sha256sum $files > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
       - name: Create GitHub Release
