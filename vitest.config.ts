@@ -7,6 +7,11 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./tests/setup.ts'],
     exclude: ['**/node_modules/**', '**/dist/**', 'tests/e2e/**'],
+    // CLI integration tests share DB state and spawn child processes; run
+    // them in a single forked process to avoid ordering / connection issues.
+    fileParallelism: false,
+    pool: 'forks',
+    poolOptions: { forks: { singleFork: true } },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],

@@ -6,16 +6,9 @@ import { rateLimit } from '~/lib/rate-limit.server'
 import { redis } from '~/lib/redis.server'
 import { slugify, withSuffix } from '~/lib/slug.server'
 import { renderTiptapToHtml } from '~/lib/tiptap.server'
-import type {
-  CreateDocumentInput,
-  UpdateDocumentInput,
-} from '~/shared/validation/document'
+import type { DocumentDetail, DocumentSummary, PaginatedResponse } from '~/shared/types'
+import type { CreateDocumentInput, UpdateDocumentInput } from '~/shared/validation/document'
 import { searchDocumentsSchema } from '~/shared/validation/document'
-import type {
-  DocumentDetail,
-  DocumentSummary,
-  PaginatedResponse,
-} from '~/shared/types'
 import type { ServiceContext } from './context'
 
 // =============================================================================
@@ -150,6 +143,22 @@ export async function deleteDocumentService(
  * (which operate on the uuid `id`).
  */
 export async function getDocumentIdBySlugService(
+  _ctx: ServiceContext,
+  input: { slug: string },
+): Promise<{ id: string; authorId: string; status: 'draft' | 'published' } | null> {
+  const row = await db.query.document.findFirst({
+    where: eq(schema.document.slug, input.slug),
+    columns: { id: true, authorId: true, status: true },
+  })
+  return row ?? null
+}
+
+/**
+ * Resolve a document slug to its DB id (uuid), searching across ALL
+ * statuses (published + draft). Used by CLI's `doc publish` /
+ * `doc delete` / `doc update` which must be able to operate on drafts.
+ */
+export async function findDocumentIdBySlugService(
   _ctx: ServiceContext,
   input: { slug: string },
 ): Promise<{ id: string; authorId: string; status: 'draft' | 'published' } | null> {

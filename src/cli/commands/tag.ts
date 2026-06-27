@@ -3,7 +3,7 @@
  */
 import type { Command } from 'commander'
 import { ApiClient } from '../api-client'
-import { formatOutput, type OutputOpts } from '../output'
+import { type OutputOpts, formatOutput } from '../output'
 
 export function registerTagCommands(program: Command): void {
   program

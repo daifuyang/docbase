@@ -16,18 +16,28 @@ export function handleError(err: unknown): never {
     switch (err.statusCode) {
       case 400:
         process.exit(2)
+        break
       case 401:
         process.exit(4)
+        break
       case 403:
         process.exit(5)
+        break
       case 429:
         process.exit(6)
+        break
       default:
         process.exit(1)
+        break
     }
   }
   if (err instanceof Error) {
     process.stderr.write(`error: ${err.message}\n`)
+    if (err.cause) {
+      process.stderr.write(
+        `cause: ${err.cause instanceof Error ? err.cause.message : String(err.cause)}\n`,
+      )
+    }
     process.exit(1)
   }
   process.stderr.write('error: unknown\n')

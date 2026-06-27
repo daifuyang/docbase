@@ -13,6 +13,7 @@
       "*.min.js",
       "package.json",
       ".specify",
+      "scripts",
       "src/routeTree.gen.ts"
     ]
   },

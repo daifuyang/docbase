@@ -3,13 +3,13 @@
  */
 import type { Command } from 'commander'
 import { Errors } from '~/lib/errors'
-import { clearCredentials, credentialsPath, loadCredentials, saveCredentials } from '../credentials'
-import type { OutputOpts } from '../types'
-import { formatOutput, printInfo } from '../output'
-import { promptHidden } from '../prompt'
 import { revokeApiKeyService } from '~/server/services/auth'
 import { contextFromHeaders } from '~/server/services/context'
 import { ApiClient } from '../api-client'
+import { clearCredentials, credentialsPath, loadCredentials, saveCredentials } from '../credentials'
+import { formatOutput, printInfo } from '../output'
+import { promptHidden } from '../prompt'
+import type { OutputOpts } from '../types'
 
 const COOKIE_NAME = 'docbase.session_token'
 void COOKIE_NAME // referenced below
@@ -30,11 +30,6 @@ export function registerAuthCommands(program: Command): void {
       const password = opts.password ?? (await promptHidden('Password: '))
       const api = new ApiClient()
       const signInResult = await api.signIn(username, password)
-      if (!signInResult.session.cookieValue) {
-        throw Errors.internal(
-          '登录成功但未获取到会话 Cookie（请确认 BETTER_AUTH_URL 与 cookie 域名一致）',
-        )
-      }
       const apiKey = await api.createApiKey({
         userId: signInResult.user.id,
         name: opts.name ?? 'cli',
@@ -51,10 +46,7 @@ export function registerAuthCommands(program: Command): void {
         },
         createdAt: new Date().toISOString(),
       })
-      printInfo(
-        `Logged in as ${signInResult.user.username}. API key stored at ${path}`,
-        globalOpts,
-      )
+      printInfo(`Logged in as ${signInResult.user.username}. API key stored at ${path}`, globalOpts)
       void COOKIE_NAME
     })
 
@@ -86,7 +78,9 @@ export function registerAuthCommands(program: Command): void {
       } catch (err) {
         // best effort — even if revocation fails, clear local file
         if (globalOpts.verbose) {
-          process.stderr.write(`warn: failed to revoke key server-side: ${(err as Error).message}\n`)
+          process.stderr.write(
+            `warn: failed to revoke key server-side: ${(err as Error).message}\n`,
+          )
         }
       }
       clearCredentials()

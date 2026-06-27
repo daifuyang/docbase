@@ -9,11 +9,7 @@ export async function listTagsService(
   input?: { limit?: number },
 ): Promise<{ items: Tag[] }> {
   const limit = input?.limit ?? 100
-  const rows = await db
-    .select()
-    .from(schema.tag)
-    .orderBy(asc(schema.tag.name))
-    .limit(limit)
+  const rows = await db.select().from(schema.tag).orderBy(asc(schema.tag.name)).limit(limit)
   return {
     items: rows.map((t) => ({ id: t.id, name: t.name, slug: t.slug })),
   }

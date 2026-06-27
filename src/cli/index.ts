@@ -1,12 +1,19 @@
 #!/usr/bin/env -S pnpm exec tsx
-// biome-ignore lint/correctness/noUnusedImports: shebang is required for `bin`
 import 'dotenv/config'
 import { handleError } from './errors'
 import { buildProgram } from './program'
 
 async function main(): Promise<void> {
   const program = buildProgram()
-  await program.parseAsync(process.argv)
+  let exitCode = 0
+  try {
+    await program.parseAsync(process.argv)
+  } catch (err) {
+    exitCode = 1
+    handleError(err)
+  } finally {
+    process.exit(exitCode)
+  }
 }
 
 main().catch((err: unknown) => {

@@ -44,8 +44,8 @@ export function buildProgram(): Command {
 
   registerCommands(program)
 
-  // Default error handler at the Commander level
-  program.exitOverride()
+  // Note: do NOT call program.exitOverride() — Commander's default behavior
+  // (process.exit(0)) is fine for --version and --help.
 
   return program
 }

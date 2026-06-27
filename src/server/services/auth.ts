@@ -6,11 +6,9 @@ import { Errors } from '~/lib/errors'
 import { getClientIp, rateLimit } from '~/lib/rate-limit.server'
 import type { PublicUser } from '~/shared/types'
 import type { SignInInput, SignUpInput } from '~/shared/validation/user'
-import { requireAdmin, type ServiceContext } from './context'
+import { type ServiceContext, requireAdmin } from './context'
 
-export async function getCurrentUserService(
-  ctx: ServiceContext,
-): Promise<PublicUser | null> {
+export async function getCurrentUserService(ctx: ServiceContext): Promise<PublicUser | null> {
   const u = await db.query.user.findFirst({ where: eq(schema.user.id, ctx.userId) })
   if (!u) return null
   return {
@@ -23,9 +21,7 @@ export async function getCurrentUserService(
   }
 }
 
-export async function listMembersService(
-  ctx: ServiceContext,
-): Promise<{ items: PublicUser[] }> {
+export async function listMembersService(ctx: ServiceContext): Promise<{ items: PublicUser[] }> {
   await requireAdmin(ctx)
   const rows = await db.select().from(schema.user).orderBy(schema.user.createdAt)
   return {
@@ -40,9 +36,7 @@ export async function listMembersService(
   }
 }
 
-export async function signInService(
-  input: SignInInput,
-): Promise<{
+export async function signInService(input: SignInInput): Promise<{
   user: PublicUser
   session: { token: string; expiresAt: string }
 }> {
@@ -90,9 +84,7 @@ export async function signInService(
   }
 }
 
-export async function signUpService(
-  input: SignUpInput,
-): Promise<{
+export async function signUpService(input: SignUpInput): Promise<{
   user: PublicUser
   session: { token: string; expiresAt: string }
 }> {
@@ -208,13 +200,11 @@ export async function createMemberService(
  * enforces session auth when ctx.request / ctx.headers is set, which we
  * intentionally omit here.
  */
-export async function createApiKeyService(
-  input: {
-    userId: string
-    name?: string
-    expiresIn?: number
-  },
-): Promise<{
+export async function createApiKeyService(input: {
+  userId: string
+  name?: string
+  expiresIn?: number
+}): Promise<{
   id: string
   key: string
   prefix: string | null
@@ -248,9 +238,7 @@ export async function createApiKeyService(
   }
 }
 
-export async function listApiKeysService(
-  ctx: ServiceContext,
-): Promise<{
+export async function listApiKeysService(ctx: ServiceContext): Promise<{
   items: Array<{
     id: string
     name: string | null

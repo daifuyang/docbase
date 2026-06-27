@@ -1,7 +1,7 @@
 import { generateHTML } from '@tiptap/html'
 import type { TipTapDoc } from '~/shared/types'
-import { extensions } from './tiptap-extensions'
 import { sanitizeHtml } from './sanitize.server'
+import { extensions } from './tiptap-extensions'
 
 export function renderTiptapToHtml(doc: TipTapDoc): string {
   const raw = generateHTML(doc as Parameters<typeof generateHTML>[0], extensions)

@@ -36,9 +36,7 @@ export async function contextFromHeaders(headers: Headers): Promise<ServiceConte
   if (apiKeyHeader) {
     const apiKey = (await auth.api.verifyApiKey({
       body: { key: apiKeyHeader },
-    })) as
-      | { valid: true; key: { referenceId: string } | null }
-      | { valid: false; key: null }
+    })) as { valid: true; key: { referenceId: string } | null } | { valid: false; key: null }
     if (apiKey?.valid && apiKey.key?.referenceId) {
       return { userId: apiKey.key.referenceId, headers, authKind: 'apiKey' }
     }

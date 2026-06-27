@@ -1,3 +1,5 @@
+import { Errors } from '~/lib/errors'
+import { createApiKeyService, getCurrentUserService, signInService } from '~/server/services/auth'
 /**
  * Thin wrapper around the service layer.
  *
@@ -9,10 +11,7 @@
  * Auth failures (no credentials file or invalid key) bubble up as
  * ServerError(401) so the CLI's `errors.ts` can map them to exit code 4.
  */
-import { contextFromHeaders, type ServiceContext } from '~/server/services/context'
-import { createApiKeyService, getCurrentUserService, signInService } from '~/server/services/auth'
-import { listSpacesService } from '~/server/services/spaces'
-import { listTagsService } from '~/server/services/tags'
+import { type ServiceContext, contextFromHeaders } from '~/server/services/context'
 import {
   createDocumentService,
   deleteDocumentService,
@@ -20,7 +19,8 @@ import {
   listDocumentsService,
   updateDocumentService,
 } from '~/server/services/documents'
-import { Errors } from '~/lib/errors'
+import { listSpacesService } from '~/server/services/spaces'
+import { listTagsService } from '~/server/services/tags'
 import { loadCredentials } from './credentials'
 
 export class ApiClient {
@@ -61,8 +61,7 @@ export class ApiClient {
 
   listDocuments = (input: unknown) => this.context().then((c) => listDocumentsService(c, input))
 
-  getDocument = (slug: string) =>
-    this.context().then((c) => getDocumentBySlugService(c, { slug }))
+  getDocument = (slug: string) => this.context().then((c) => getDocumentBySlugService(c, { slug }))
 
   createDocument = (input: Parameters<typeof createDocumentService>[1]) =>
     this.context().then((c) => createDocumentService(c, input))
@@ -70,6 +69,10 @@ export class ApiClient {
   updateDocument = (input: Parameters<typeof updateDocumentService>[1]) =>
     this.context().then((c) => updateDocumentService(c, input))
 
-  deleteDocument = (id: string) =>
-    this.context().then((c) => deleteDocumentService(c, { id }))
+  deleteDocument = (id: string) => this.context().then((c) => deleteDocumentService(c, { id }))
+
+  findDocumentIdBySlug = (slug: string) =>
+    this.context().then((c) =>
+      import('~/server/services/documents').then((m) => m.findDocumentIdBySlugService(c, { slug })),
+    )
 }

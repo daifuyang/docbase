@@ -47,3 +47,8 @@ test-results/
 
 # Drizzle
 drizzle/
+
+# External / downloaded skills (see .claude/skills/ for project-owned skills)
+.agents/
+skills-lock.json
+.claude/skills/skill-creator

@@ -1,3 +1,4 @@
+import { generateJSON } from '@tiptap/html'
 /**
  * Markdown + YAML frontmatter -> TipTap JSON converter.
  *
@@ -6,7 +7,6 @@
  * using the same extensions list the server's read-time renderer uses.
  */
 import matter from 'gray-matter'
-import { generateJSON } from '@tiptap/html'
 import { marked } from 'marked'
 import { extensions } from '~/lib/tiptap-extensions'
 import type { TipTapDoc } from '~/shared/types'

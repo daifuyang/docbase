@@ -4,11 +4,11 @@
 import { readFileSync } from 'node:fs'
 import type { Command } from 'commander'
 import { Errors } from '~/lib/errors'
-import { createDocumentSchema, updateDocumentSchema } from '~/shared/validation/document'
 import type { TipTapDoc } from '~/shared/types'
+import { createDocumentSchema, updateDocumentSchema } from '~/shared/validation/document'
 import { ApiClient } from '../api-client'
 import { markdownToTiptap, parseFrontmatter } from '../markdown'
-import { formatOutput, printInfo, type OutputOpts } from '../output'
+import { type OutputOpts, formatOutput, printInfo } from '../output'
 import type { Frontmatter } from '../types'
 
 async function readMarkdown(fromFile?: string, fromStdin?: boolean): Promise<string> {
@@ -16,7 +16,9 @@ async function readMarkdown(fromFile?: string, fromStdin?: boolean): Promise<str
     return await new Promise<string>((resolve, reject) => {
       let buf = ''
       process.stdin.setEncoding('utf8')
-      process.stdin.on('data', (chunk: string) => (buf += chunk))
+      process.stdin.on('data', (chunk: string) => {
+        buf += chunk
+      })
       process.stdin.on('end', () => resolve(buf))
       process.stdin.on('error', reject)
     })
@@ -37,7 +39,7 @@ export function registerDocCommands(program: Command): void {
     .option('--stdin', '从 stdin 读取')
     .option('--space <slugOrName>', '知识空间（slug 或名称）')
     .option('--category <slugOrName>', '分类（slug 或名称）')
-    .option('--status <status>', 'draft 或 published', 'draft')
+    .option('--status <status>', 'draft 或 published（优先于 frontmatter）')
     .option('--tags <list>', '逗号分隔的标签列表')
     .action(
       async (opts: {
@@ -74,7 +76,10 @@ export function registerDocCommands(program: Command): void {
         const status = (opts.status ?? data.status ?? 'draft') as 'draft' | 'published'
         const tags =
           opts.tags !== undefined
-            ? opts.tags.split(',').map((s) => s.trim()).filter(Boolean)
+            ? opts.tags
+                .split(',')
+                .map((s) => s.trim())
+                .filter(Boolean)
             : (data.tags ?? [])
 
         const tiptapDoc: TipTapDoc = markdownToTiptap(body)
@@ -134,22 +139,17 @@ export function registerDocCommands(program: Command): void {
     .option('--space <slug>', '按空间 slug 过滤')
     .option('--page <n>', '页码', '1')
     .option('--page-size <n>', '每页数量', '20')
-    .action(
-      async (
-        query: string,
-        opts: { space?: string; page?: string; pageSize?: string },
-      ) => {
-        const globalOpts = program.opts<OutputOpts>()
-        const api = new ApiClient()
-        const result = await api.listDocuments({
-          query,
-          spaceSlug: opts.space,
-          page: opts.page ? Number.parseInt(opts.page, 10) : 1,
-          pageSize: opts.pageSize ? Number.parseInt(opts.pageSize, 10) : 20,
-        })
-        formatOutput(result, globalOpts)
-      },
-    )
+    .action(async (query: string, opts: { space?: string; page?: string; pageSize?: string }) => {
+      const globalOpts = program.opts<OutputOpts>()
+      const api = new ApiClient()
+      const result = await api.listDocuments({
+        query,
+        spaceSlug: opts.space,
+        page: opts.page ? Number.parseInt(opts.page, 10) : 1,
+        pageSize: opts.pageSize ? Number.parseInt(opts.pageSize, 10) : 20,
+      })
+      formatOutput(result, globalOpts)
+    })
 
   doc
     .command('get <slug>')
@@ -183,10 +183,8 @@ export function registerDocCommands(program: Command): void {
         const globalOpts = program.opts<OutputOpts>()
         const api = new ApiClient()
 
-        // Resolve slug -> id (updateDocumentService expects uuid)
-        const found = await api
-          .listDocuments({ query: slug })
-          .then((p) => p.items.find((d) => d.slug === slug))
+        // Resolve slug -> id (search across all statuses so we can update drafts too)
+        const found = await api.findDocumentIdBySlug(slug)
         if (!found) throw Errors.notFound(`未找到 slug=${slug}`)
 
         let contentJson: TipTapDoc | undefined
@@ -204,7 +202,10 @@ export function registerDocCommands(program: Command): void {
         }
 
         const tags = opts.tags
-          ? opts.tags.split(',').map((s) => s.trim()).filter(Boolean)
+          ? opts.tags
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean)
           : (frontmatterTags as string[] | undefined)
 
         const input = updateDocumentSchema.parse({
@@ -226,9 +227,7 @@ export function registerDocCommands(program: Command): void {
     .action(async (slug: string) => {
       const opts = program.opts<OutputOpts>()
       const api = new ApiClient()
-      const found = await api
-        .listDocuments({ query: slug })
-        .then((p) => p.items.find((d) => d.slug === slug))
+      const found = await api.findDocumentIdBySlug(slug)
       if (!found) throw Errors.notFound(`未找到 slug=${slug}`)
       const result = await api.updateDocument({ id: found.id, status: 'published' })
       printInfo(`Published: ${result.document.slug}`, opts)
@@ -242,12 +241,10 @@ export function registerDocCommands(program: Command): void {
     .action(async (slug: string, opts: { yes?: boolean }) => {
       const globalOpts = program.opts<OutputOpts>()
       const api = new ApiClient()
-      const found = await api
-        .listDocuments({ query: slug })
-        .then((p) => p.items.find((d) => d.slug === slug))
+      const found = await api.findDocumentIdBySlug(slug)
       if (!found) throw Errors.notFound(`未找到 slug=${slug}`)
       if (!opts.yes && process.stdin.isTTY) {
-        process.stderr.write(`Delete "${found.title}" (${slug})? [y/N] `)
+        process.stderr.write(`Delete "${slug}"? [y/N] `)
         const answer = await new Promise<string>((resolve) => {
           const onData = (ch: Buffer) => {
             process.stdin.removeListener('data', onData)

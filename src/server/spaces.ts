@@ -42,7 +42,9 @@ export const listCategories = createServerFn({ method: 'GET' }).handler(async ()
 )
 
 export const createSpace = createServerFn({ method: 'POST' })
-  .validator(z.object({ name: z.string().min(1).max(60), description: z.string().max(200).optional() }))
+  .validator(
+    z.object({ name: z.string().min(1).max(60), description: z.string().max(200).optional() }),
+  )
   .handler(async ({ data }) =>
     createSpaceService(await contextFromHeaders(getRequestHeaders()), data),
   )

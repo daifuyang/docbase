@@ -1,6 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders } from '@tanstack/react-start/server'
-import { contextFromHeaders } from '~/server/services/context'
 import {
   createMemberService,
   getCurrentUserService,
@@ -9,6 +8,7 @@ import {
   signOutService,
   signUpService,
 } from '~/server/services/auth'
+import { contextFromHeaders } from '~/server/services/context'
 import { signInSchema, signUpSchema } from '~/shared/validation/user'
 
 // =============================================================================

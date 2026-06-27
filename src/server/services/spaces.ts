@@ -9,9 +9,7 @@ import { requireAdmin } from './context'
 
 const NAV_EXPANDED_KEY = 'navigation.expanded'
 
-export async function listSpacesService(
-  _ctx: ServiceContext,
-): Promise<{ items: SpaceSummary[] }> {
+export async function listSpacesService(_ctx: ServiceContext): Promise<{ items: SpaceSummary[] }> {
   const rows = await db.select().from(schema.space).orderBy(asc(schema.space.sortOrder))
   return {
     items: rows.map((row) => ({
@@ -27,10 +25,7 @@ export async function listSpaceTreeService(
   _ctx: ServiceContext,
 ): Promise<{ items: SpaceTreeItem[] }> {
   const spaces = await db.select().from(schema.space).orderBy(asc(schema.space.sortOrder))
-  const categories = await db
-    .select()
-    .from(schema.category)
-    .orderBy(asc(schema.category.sortOrder))
+  const categories = await db.select().from(schema.category).orderBy(asc(schema.category.sortOrder))
   const documents = await db
     .select({
       id: schema.document.id,

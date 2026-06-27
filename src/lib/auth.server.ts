@@ -1,7 +1,7 @@
+import { apiKey } from '@better-auth/api-key'
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { tanstackStartCookies } from 'better-auth/tanstack-start'
-import { apiKey } from '@better-auth/api-key'
 import * as schema from '~/../db/schema'
 import { db } from './db.server'
 
@@ -45,6 +45,11 @@ export const auth = betterAuth({
       apiKeyHeaders: ['x-api-key'],
       enableMetadata: true,
       defaultPrefix: 'docbase_',
+      // Disable the api-key plugin's default per-key rate limiting so that
+      // CLI tests (and human users running many commands in a session) are
+      // not blocked. Document-creation rate limiting is enforced separately
+      // by src/lib/rate-limit.server.ts at the service layer.
+      rateLimit: { enabled: false },
     }),
   ],
   // Custom additional fields that we need in the user table.

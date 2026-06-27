@@ -11,6 +11,7 @@ export function formatOutput(data: unknown, opts: OutputOpts): void {
     process.stdout.write(`${JSON.stringify(data, null, 2)}\n`)
     return
   }
+  // biome-ignore lint/suspicious/noConsole: intentional CLI output
   console.dir(data, { depth: 8, colors: opts.color })
 }
 

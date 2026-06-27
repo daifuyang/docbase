@@ -15,9 +15,7 @@ import {
 
 const TIPTAP = {
   type: 'doc' as const,
-  content: [
-    { type: 'paragraph', content: [{ type: 'text', text: 'service-layer test' }] },
-  ],
+  content: [{ type: 'paragraph', content: [{ type: 'text', text: 'service-layer test' }] }],
 }
 
 const ctx = contextForUser('svc_test_user')
