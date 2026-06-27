@@ -15,6 +15,7 @@
   - Feature requirements from spec.md
   - Technical context from plan.md
   - Implementation details from tasks.md
+  - Constitution principles I-VII, including testing, UX, observability, security, and data integrity
   
   DO NOT keep these sample items in the generated checklist file.
   ============================================================================
@@ -22,15 +23,15 @@
 
 ## [Category 1]
 
-- [ ] CHK001 First checklist item with clear action
-- [ ] CHK002 Second checklist item
-- [ ] CHK003 Third checklist item
+- [ ] CHK001 Confirm the change maps to a user story, requirement, or constitution gate
+- [ ] CHK002 Confirm test-first evidence exists or a manual executable acceptance check is documented
+- [ ] CHK003 Confirm module boundaries and dependency direction are respected
 
 ## [Category 2]
 
-- [ ] CHK004 Another category item
-- [ ] CHK005 Item with specific criteria
-- [ ] CHK006 Final item in this category
+- [ ] CHK004 Confirm Chinese UX copy, navigation/search placement, large-screen layout, focus styling, and states meet the product experience requirements
+- [ ] CHK005 Confirm security, privacy, and data integrity risks are reviewed
+- [ ] CHK006 Confirm observability and performance impacts are documented where relevant
 
 ## Notes
 

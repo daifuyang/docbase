@@ -78,6 +78,15 @@
 - What happens when [boundary condition]?
 - How does system handle [error scenario]?
 
+### Product Experience Requirements *(include for UI-facing features)*
+
+- **UX-001**: Interface copy MUST fit the target Chinese user context and avoid literal translations of foreign SaaS patterns.
+- **UX-002**: Layout MUST be verified on desktop and mobile widths with no text overflow, incoherent overlap, or unstable control sizing.
+- **UX-003**: Form, empty, loading, error, and success states MUST use consistent existing component patterns unless an exception is justified.
+- **UX-004**: Navigation and global action placement MUST have clear responsibility boundaries between topbar, sidebar, and page context.
+- **UX-005**: Search controls MUST either provide real input behavior or use a clearly triggered dialog/panel with honest empty and unsupported states.
+- **UX-006**: Visual focus and selection states MUST fit Chinese enterprise UI conventions, avoiding heavy outline/ring styling unless required for accessibility.
+
 ## Requirements *(mandatory)*
 
 <!--
@@ -92,6 +101,9 @@
 - **FR-003**: Users MUST be able to [key interaction, e.g., "reset their password"]
 - **FR-004**: System MUST [data requirement, e.g., "persist user preferences"]
 - **FR-005**: System MUST [behavior, e.g., "log all security events"]
+- **SEC-001**: System MUST validate all user-controlled input at the boundary.
+- **SEC-002**: System MUST enforce authorization for protected writes and resource ownership checks where applicable.
+- **SEC-003**: System MUST avoid exposing secrets, tokens, stack traces, or sensitive personal data in logs and user-visible errors.
 
 *Example of marking unclear requirements:*
 
@@ -116,6 +128,7 @@
 - **SC-002**: [Measurable metric, e.g., "System handles 1000 concurrent users without degradation"]
 - **SC-003**: [User satisfaction metric, e.g., "90% of users successfully complete primary task on first attempt"]
 - **SC-004**: [Business metric, e.g., "Reduce support tickets related to [X] by 50%"]
+- **SC-005**: [UX quality metric, e.g., "Primary UI has no text overflow or incoherent focus rings at 375px, 768px, 1440px, and large-screen widths"]
 
 ## Assumptions
 

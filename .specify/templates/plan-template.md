@@ -40,7 +40,15 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+| Principle | Gate | Status |
+|-----------|------|--------|
+| I. Modular Boundaries & Library-First | Define real module boundaries, ownership, and dependency direction. Business logic must not live only in routes/components. | [PASS/FAIL + notes] |
+| II. Test-First Delivery | Identify tests or executable acceptance checks that will fail before implementation. | [PASS/FAIL + notes] |
+| III. Contract & Journey Coverage | List contract, integration, and P1 journey coverage required for this feature. | [PASS/FAIL + notes] |
+| IV. Production Observability & Operability | Define logging, health, failure handling, and measurable performance impact. | [PASS/FAIL + notes] |
+| V. Spec-First Change Control | Confirm scope, non-goals, acceptance criteria, and traceability to tasks. | [PASS/FAIL + notes] |
+| VI. Product Experience & Domain Fit | Define UX, Chinese copy, navigation/search responsibilities, responsive/large-screen layout, and visual focus acceptance requirements for UI changes. | [PASS/FAIL + notes] |
+| VII. Security, Privacy & Data Integrity | Identify auth, authorization, input validation, sanitization, rate limit, migration, and data consistency concerns. | [PASS/FAIL + notes] |
 
 ## Project Structure
 
