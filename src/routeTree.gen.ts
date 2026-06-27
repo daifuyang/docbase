@@ -20,6 +20,15 @@ import { Route as DocumentsSlugRouteImport } from './routes/documents.$slug'
 import { Route as AuthLoginRouteImport } from './routes/auth.login'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as DocumentsSlugEditRouteImport } from './routes/documents.$slug.edit'
+import { Route as ApiV1OpenapiJsonRouteImport } from './routes/api/v1/openapi.json'
+import { Route as ApiV1CliTagsRouteImport } from './routes/api/v1/cli/tags'
+import { Route as ApiV1CliSpacesRouteImport } from './routes/api/v1/cli/spaces'
+import { Route as ApiV1CliDocumentsRouteImport } from './routes/api/v1/cli/documents'
+import { Route as ApiV1CliDocumentsSlugRouteImport } from './routes/api/v1/cli/documents.$slug'
+import { Route as ApiV1CliAuthWhoamiRouteImport } from './routes/api/v1/cli/auth/whoami'
+import { Route as ApiV1CliAuthLogoutRouteImport } from './routes/api/v1/cli/auth/logout'
+import { Route as ApiV1CliAuthLoginRouteImport } from './routes/api/v1/cli/auth/login'
+import { Route as ApiV1CliSpacesSpaceIdCategoriesRouteImport } from './routes/api/v1/cli/spaces.$spaceId.categories'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -76,6 +85,52 @@ const DocumentsSlugEditRoute = DocumentsSlugEditRouteImport.update({
   path: '/edit',
   getParentRoute: () => DocumentsSlugRoute,
 } as any)
+const ApiV1OpenapiJsonRoute = ApiV1OpenapiJsonRouteImport.update({
+  id: '/api/v1/openapi/json',
+  path: '/api/v1/openapi/json',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1CliTagsRoute = ApiV1CliTagsRouteImport.update({
+  id: '/api/v1/cli/tags',
+  path: '/api/v1/cli/tags',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1CliSpacesRoute = ApiV1CliSpacesRouteImport.update({
+  id: '/api/v1/cli/spaces',
+  path: '/api/v1/cli/spaces',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1CliDocumentsRoute = ApiV1CliDocumentsRouteImport.update({
+  id: '/api/v1/cli/documents',
+  path: '/api/v1/cli/documents',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1CliDocumentsSlugRoute = ApiV1CliDocumentsSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => ApiV1CliDocumentsRoute,
+} as any)
+const ApiV1CliAuthWhoamiRoute = ApiV1CliAuthWhoamiRouteImport.update({
+  id: '/api/v1/cli/auth/whoami',
+  path: '/api/v1/cli/auth/whoami',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1CliAuthLogoutRoute = ApiV1CliAuthLogoutRouteImport.update({
+  id: '/api/v1/cli/auth/logout',
+  path: '/api/v1/cli/auth/logout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1CliAuthLoginRoute = ApiV1CliAuthLoginRouteImport.update({
+  id: '/api/v1/cli/auth/login',
+  path: '/api/v1/cli/auth/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1CliSpacesSpaceIdCategoriesRoute =
+  ApiV1CliSpacesSpaceIdCategoriesRouteImport.update({
+    id: '/$spaceId/categories',
+    path: '/$spaceId/categories',
+    getParentRoute: () => ApiV1CliSpacesRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -89,6 +144,15 @@ export interface FileRoutesByFullPath {
   '/spaces/$slug': typeof SpacesSlugRoute
   '/tags/$slug': typeof TagsSlugRoute
   '/documents/$slug/edit': typeof DocumentsSlugEditRoute
+  '/api/v1/cli/documents': typeof ApiV1CliDocumentsRouteWithChildren
+  '/api/v1/cli/spaces': typeof ApiV1CliSpacesRouteWithChildren
+  '/api/v1/cli/tags': typeof ApiV1CliTagsRoute
+  '/api/v1/openapi/json': typeof ApiV1OpenapiJsonRoute
+  '/api/v1/cli/auth/login': typeof ApiV1CliAuthLoginRoute
+  '/api/v1/cli/auth/logout': typeof ApiV1CliAuthLogoutRoute
+  '/api/v1/cli/auth/whoami': typeof ApiV1CliAuthWhoamiRoute
+  '/api/v1/cli/documents/$slug': typeof ApiV1CliDocumentsSlugRoute
+  '/api/v1/cli/spaces/$spaceId/categories': typeof ApiV1CliSpacesSpaceIdCategoriesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -102,6 +166,15 @@ export interface FileRoutesByTo {
   '/spaces/$slug': typeof SpacesSlugRoute
   '/tags/$slug': typeof TagsSlugRoute
   '/documents/$slug/edit': typeof DocumentsSlugEditRoute
+  '/api/v1/cli/documents': typeof ApiV1CliDocumentsRouteWithChildren
+  '/api/v1/cli/spaces': typeof ApiV1CliSpacesRouteWithChildren
+  '/api/v1/cli/tags': typeof ApiV1CliTagsRoute
+  '/api/v1/openapi/json': typeof ApiV1OpenapiJsonRoute
+  '/api/v1/cli/auth/login': typeof ApiV1CliAuthLoginRoute
+  '/api/v1/cli/auth/logout': typeof ApiV1CliAuthLogoutRoute
+  '/api/v1/cli/auth/whoami': typeof ApiV1CliAuthWhoamiRoute
+  '/api/v1/cli/documents/$slug': typeof ApiV1CliDocumentsSlugRoute
+  '/api/v1/cli/spaces/$spaceId/categories': typeof ApiV1CliSpacesSpaceIdCategoriesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -116,6 +189,15 @@ export interface FileRoutesById {
   '/spaces/$slug': typeof SpacesSlugRoute
   '/tags/$slug': typeof TagsSlugRoute
   '/documents/$slug/edit': typeof DocumentsSlugEditRoute
+  '/api/v1/cli/documents': typeof ApiV1CliDocumentsRouteWithChildren
+  '/api/v1/cli/spaces': typeof ApiV1CliSpacesRouteWithChildren
+  '/api/v1/cli/tags': typeof ApiV1CliTagsRoute
+  '/api/v1/openapi/json': typeof ApiV1OpenapiJsonRoute
+  '/api/v1/cli/auth/login': typeof ApiV1CliAuthLoginRoute
+  '/api/v1/cli/auth/logout': typeof ApiV1CliAuthLogoutRoute
+  '/api/v1/cli/auth/whoami': typeof ApiV1CliAuthWhoamiRoute
+  '/api/v1/cli/documents/$slug': typeof ApiV1CliDocumentsSlugRoute
+  '/api/v1/cli/spaces/$spaceId/categories': typeof ApiV1CliSpacesSpaceIdCategoriesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -131,6 +213,15 @@ export interface FileRouteTypes {
     | '/spaces/$slug'
     | '/tags/$slug'
     | '/documents/$slug/edit'
+    | '/api/v1/cli/documents'
+    | '/api/v1/cli/spaces'
+    | '/api/v1/cli/tags'
+    | '/api/v1/openapi/json'
+    | '/api/v1/cli/auth/login'
+    | '/api/v1/cli/auth/logout'
+    | '/api/v1/cli/auth/whoami'
+    | '/api/v1/cli/documents/$slug'
+    | '/api/v1/cli/spaces/$spaceId/categories'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -144,6 +235,15 @@ export interface FileRouteTypes {
     | '/spaces/$slug'
     | '/tags/$slug'
     | '/documents/$slug/edit'
+    | '/api/v1/cli/documents'
+    | '/api/v1/cli/spaces'
+    | '/api/v1/cli/tags'
+    | '/api/v1/openapi/json'
+    | '/api/v1/cli/auth/login'
+    | '/api/v1/cli/auth/logout'
+    | '/api/v1/cli/auth/whoami'
+    | '/api/v1/cli/documents/$slug'
+    | '/api/v1/cli/spaces/$spaceId/categories'
   id:
     | '__root__'
     | '/'
@@ -157,6 +257,15 @@ export interface FileRouteTypes {
     | '/spaces/$slug'
     | '/tags/$slug'
     | '/documents/$slug/edit'
+    | '/api/v1/cli/documents'
+    | '/api/v1/cli/spaces'
+    | '/api/v1/cli/tags'
+    | '/api/v1/openapi/json'
+    | '/api/v1/cli/auth/login'
+    | '/api/v1/cli/auth/logout'
+    | '/api/v1/cli/auth/whoami'
+    | '/api/v1/cli/documents/$slug'
+    | '/api/v1/cli/spaces/$spaceId/categories'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -170,6 +279,13 @@ export interface RootRouteChildren {
   DocumentsNewRoute: typeof DocumentsNewRoute
   SpacesSlugRoute: typeof SpacesSlugRoute
   TagsSlugRoute: typeof TagsSlugRoute
+  ApiV1CliDocumentsRoute: typeof ApiV1CliDocumentsRouteWithChildren
+  ApiV1CliSpacesRoute: typeof ApiV1CliSpacesRouteWithChildren
+  ApiV1CliTagsRoute: typeof ApiV1CliTagsRoute
+  ApiV1OpenapiJsonRoute: typeof ApiV1OpenapiJsonRoute
+  ApiV1CliAuthLoginRoute: typeof ApiV1CliAuthLoginRoute
+  ApiV1CliAuthLogoutRoute: typeof ApiV1CliAuthLogoutRoute
+  ApiV1CliAuthWhoamiRoute: typeof ApiV1CliAuthWhoamiRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -251,6 +367,69 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocumentsSlugEditRouteImport
       parentRoute: typeof DocumentsSlugRoute
     }
+    '/api/v1/openapi/json': {
+      id: '/api/v1/openapi/json'
+      path: '/api/v1/openapi/json'
+      fullPath: '/api/v1/openapi/json'
+      preLoaderRoute: typeof ApiV1OpenapiJsonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/cli/tags': {
+      id: '/api/v1/cli/tags'
+      path: '/api/v1/cli/tags'
+      fullPath: '/api/v1/cli/tags'
+      preLoaderRoute: typeof ApiV1CliTagsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/cli/spaces': {
+      id: '/api/v1/cli/spaces'
+      path: '/api/v1/cli/spaces'
+      fullPath: '/api/v1/cli/spaces'
+      preLoaderRoute: typeof ApiV1CliSpacesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/cli/documents': {
+      id: '/api/v1/cli/documents'
+      path: '/api/v1/cli/documents'
+      fullPath: '/api/v1/cli/documents'
+      preLoaderRoute: typeof ApiV1CliDocumentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/cli/documents/$slug': {
+      id: '/api/v1/cli/documents/$slug'
+      path: '/$slug'
+      fullPath: '/api/v1/cli/documents/$slug'
+      preLoaderRoute: typeof ApiV1CliDocumentsSlugRouteImport
+      parentRoute: typeof ApiV1CliDocumentsRoute
+    }
+    '/api/v1/cli/auth/whoami': {
+      id: '/api/v1/cli/auth/whoami'
+      path: '/api/v1/cli/auth/whoami'
+      fullPath: '/api/v1/cli/auth/whoami'
+      preLoaderRoute: typeof ApiV1CliAuthWhoamiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/cli/auth/logout': {
+      id: '/api/v1/cli/auth/logout'
+      path: '/api/v1/cli/auth/logout'
+      fullPath: '/api/v1/cli/auth/logout'
+      preLoaderRoute: typeof ApiV1CliAuthLogoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/cli/auth/login': {
+      id: '/api/v1/cli/auth/login'
+      path: '/api/v1/cli/auth/login'
+      fullPath: '/api/v1/cli/auth/login'
+      preLoaderRoute: typeof ApiV1CliAuthLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/cli/spaces/$spaceId/categories': {
+      id: '/api/v1/cli/spaces/$spaceId/categories'
+      path: '/$spaceId/categories'
+      fullPath: '/api/v1/cli/spaces/$spaceId/categories'
+      preLoaderRoute: typeof ApiV1CliSpacesSpaceIdCategoriesRouteImport
+      parentRoute: typeof ApiV1CliSpacesRoute
+    }
   }
 }
 
@@ -266,6 +445,29 @@ const DocumentsSlugRouteWithChildren = DocumentsSlugRoute._addFileChildren(
   DocumentsSlugRouteChildren,
 )
 
+interface ApiV1CliDocumentsRouteChildren {
+  ApiV1CliDocumentsSlugRoute: typeof ApiV1CliDocumentsSlugRoute
+}
+
+const ApiV1CliDocumentsRouteChildren: ApiV1CliDocumentsRouteChildren = {
+  ApiV1CliDocumentsSlugRoute: ApiV1CliDocumentsSlugRoute,
+}
+
+const ApiV1CliDocumentsRouteWithChildren =
+  ApiV1CliDocumentsRoute._addFileChildren(ApiV1CliDocumentsRouteChildren)
+
+interface ApiV1CliSpacesRouteChildren {
+  ApiV1CliSpacesSpaceIdCategoriesRoute: typeof ApiV1CliSpacesSpaceIdCategoriesRoute
+}
+
+const ApiV1CliSpacesRouteChildren: ApiV1CliSpacesRouteChildren = {
+  ApiV1CliSpacesSpaceIdCategoriesRoute: ApiV1CliSpacesSpaceIdCategoriesRoute,
+}
+
+const ApiV1CliSpacesRouteWithChildren = ApiV1CliSpacesRoute._addFileChildren(
+  ApiV1CliSpacesRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
@@ -277,6 +479,13 @@ const rootRouteChildren: RootRouteChildren = {
   DocumentsNewRoute: DocumentsNewRoute,
   SpacesSlugRoute: SpacesSlugRoute,
   TagsSlugRoute: TagsSlugRoute,
+  ApiV1CliDocumentsRoute: ApiV1CliDocumentsRouteWithChildren,
+  ApiV1CliSpacesRoute: ApiV1CliSpacesRouteWithChildren,
+  ApiV1CliTagsRoute: ApiV1CliTagsRoute,
+  ApiV1OpenapiJsonRoute: ApiV1OpenapiJsonRoute,
+  ApiV1CliAuthLoginRoute: ApiV1CliAuthLoginRoute,
+  ApiV1CliAuthLogoutRoute: ApiV1CliAuthLogoutRoute,
+  ApiV1CliAuthWhoamiRoute: ApiV1CliAuthWhoamiRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

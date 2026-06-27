@@ -9,6 +9,8 @@ export type Credentials = {
   apiKeyId: string
   /** Optional prefix echoed back from the plugin (e.g. "docbase"). */
   prefix: string | null
+  /** ISO timestamp when the key expires; null = never. */
+  expiresAt: string | null
   /** Owner of the key. */
   user: {
     id: string

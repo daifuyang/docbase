@@ -3,7 +3,7 @@ import * as schema from '~/../db/schema'
 import { auth } from '~/lib/auth.server'
 import { db } from '~/lib/db.server'
 import { Errors } from '~/lib/errors'
-import { getClientIp, rateLimit } from '~/lib/rate-limit.server'
+import { rateLimit } from '~/lib/rate-limit.server'
 import type { PublicUser } from '~/shared/types'
 import type { SignInInput, SignUpInput } from '~/shared/validation/user'
 import { requireAdmin, type ServiceContext } from './context'
@@ -46,10 +46,13 @@ export async function signInService(
   user: PublicUser
   session: { token: string; expiresAt: string }
 }> {
+  // NOTE: rate-limit is intentionally NOT applied at function entry — that
+  // would lock out legitimate users with correct credentials once a counter
+  // fills up. We only count failed attempts (password wrong / user unknown),
+  // keyed by `account` so brute force on a single account is throttled
+  // regardless of source IP. The `.catch(() => {})` swallows Redis errors so
+  // a Redis outage never produces a false "wrong credentials".
   const headers = new Headers()
-  const ip = getClientIp(headers)
-  const rl = await rateLimit('auth:login', ip, 10, 60)
-  if (!rl.allowed) throw Errors.rateLimited(rl.resetAt)
 
   let result: { user: { id: string; email: string }; token: string }
   try {
@@ -58,7 +61,13 @@ export async function signInService(
       const user = await db.query.user.findFirst({
         where: eq(schema.user.username, input.account),
       })
-      if (!user) throw Errors.invalidCredentials()
+      if (!user) {
+        const rl = await rateLimit('auth:login:fail', input.account, 5, 60).catch(
+          () => ({ allowed: false as const, remaining: 0, resetAt: 0 }),
+        )
+        if (!rl.allowed) throw Errors.rateLimited(rl.resetAt)
+        throw Errors.invalidCredentials()
+      }
       email = user.email
     }
 
@@ -67,7 +76,12 @@ export async function signInService(
       headers,
       asResponse: false,
     })) as { user: { id: string; email: string }; token: string }
-  } catch {
+  } catch (e) {
+    if (e instanceof Error && e.message?.includes('rate')) throw e
+    const rl = await rateLimit('auth:login:fail', input.account, 5, 60).catch(
+      () => ({ allowed: false as const, remaining: 0, resetAt: 0 }),
+    )
+    if (!rl.allowed) throw Errors.rateLimited(rl.resetAt)
     throw Errors.invalidCredentials()
   }
 
@@ -96,15 +110,19 @@ export async function signUpService(
   user: PublicUser
   session: { token: string; expiresAt: string }
 }> {
+  // Only throttle on failure — see signInService comment for rationale.
   const headers = new Headers()
-  const ip = getClientIp(headers)
-  const rl = await rateLimit('auth:register', ip, 5, 60)
-  if (!rl.allowed) throw Errors.rateLimited(rl.resetAt)
 
   const existingUsername = await db.query.user.findFirst({
     where: eq(schema.user.username, input.username),
   })
-  if (existingUsername) throw Errors.usernameTaken()
+  if (existingUsername) {
+    const rl = await rateLimit('auth:register:fail', input.username, 5, 60).catch(
+      () => ({ allowed: false as const, remaining: 0, resetAt: 0 }),
+    )
+    if (!rl.allowed) throw Errors.rateLimited(rl.resetAt)
+    throw Errors.usernameTaken()
+  }
 
   let result: { user: { id: string; email: string }; token: string }
   try {
@@ -120,6 +138,10 @@ export async function signUpService(
       asResponse: false,
     })) as { user: { id: string; email: string }; token: string }
   } catch (e: unknown) {
+    const rl = await rateLimit('auth:register:fail', input.username, 5, 60).catch(
+      () => ({ allowed: false as const, remaining: 0, resetAt: 0 }),
+    )
+    if (!rl.allowed) throw Errors.rateLimited(rl.resetAt)
     const msg = (e as Error).message ?? ''
     if (msg.includes('exists') || msg.includes('already')) {
       throw Errors.emailTaken()

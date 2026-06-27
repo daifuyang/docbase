@@ -1,7 +1,7 @@
 import { createFileRoute, notFound, redirect } from '@tanstack/react-router'
 import { DocumentForm } from '~/components/document-form'
 import { getCurrentUser } from '~/server/auth'
-import { getDocumentBySlug } from '~/server/documents'
+import { readDocumentBySlug } from '~/server/documents'
 import { listCategoriesBySpace, listSpaces } from '~/server/spaces'
 import type { TipTapDoc } from '~/shared/types'
 
@@ -9,7 +9,7 @@ export const Route = createFileRoute('/documents/$slug/edit')({
   beforeLoad: async ({ params }) => {
     const [me, document] = await Promise.all([
       getCurrentUser(),
-      getDocumentBySlug({ data: { slug: params.slug } }),
+      readDocumentBySlug({ data: { slug: params.slug } }),
     ])
     if (!me) throw redirect({ to: '/auth/login' })
     if (!document) throw notFound()
@@ -20,7 +20,7 @@ export const Route = createFileRoute('/documents/$slug/edit')({
   },
   loader: async ({ params }) => {
     const [document, spaces] = await Promise.all([
-      getDocumentBySlug({ data: { slug: params.slug } }),
+      readDocumentBySlug({ data: { slug: params.slug } }),
       listSpaces(),
     ])
     if (!document) throw notFound()

@@ -41,8 +41,23 @@ pnpm dev
 - 全局基础搜索
 - 中文企业产品风格布局
 
+## CLI（命令行）
+
+DocBase 自带 `docbase` CLI，可从命令行管理空间、分类、标签和文档。
+
+```bash
+pnpm cli auth login --username admin --password admin123   # 登录
+pnpm cli space list                                         # 列出空间
+pnpm cli doc create -f ./post.md --space "工程知识库" --category "研发规范" --status published
+pnpm cli tag list                                           # 列出标签
+pnpm cli auth logout                                        # 登出
+```
+
+CLI 用 better-auth 的 **API Key 鉴权**（与 Web 的 session cookie 共用账号体系）。详细命令、鉴权机制、expiry 处理见 [`docs/cli.md`](./docs/cli.md)。
+
 ## 文档
 
+- [CLI 使用指南](./docs/cli.md)
 - [项目宪章](./.specify/memory/constitution.md)
 - [Feature 规范](./specs/001-docbase-mvp/spec.md)
 - [实现计划](./specs/001-docbase-mvp/plan.md)

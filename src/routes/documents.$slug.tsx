@@ -1,6 +1,7 @@
 import { Link, createFileRoute, notFound } from '@tanstack/react-router'
 import { ChevronRight, Clock, Edit, Eye, Hash, Info, Trash2, UserRound } from 'lucide-react'
 import { useTransition } from 'react'
+import { ScrollToTop } from '~/components/scroll-to-top'
 import { TagPill } from '~/components/tag-pill'
 import { getCurrentUser } from '~/server/auth'
 import { deleteDocument, getDocumentBySlug } from '~/server/documents'
@@ -34,151 +35,155 @@ function DocumentPage() {
   const headings = extractHeadings(document.contentJson)
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl gap-8 px-4 py-8 sm:px-6 2xl:px-8">
-      <main className="min-w-0 flex-1">
-        <div className="mx-auto w-full max-w-3xl">
-          <nav className="mb-4 flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Link to="/" className="hover:text-primary">
-              知识首页
-            </Link>
-            {document.space && (
-              <>
-                <ChevronRight className="h-3 w-3" />
-                <Link
-                  to="/spaces/$slug"
-                  params={{ slug: document.space.slug }}
-                  className="hover:text-primary"
-                >
-                  {document.space.name}
-                </Link>
-              </>
-            )}
-            {document.category && (
-              <>
-                <ChevronRight className="h-3 w-3" />
-                <span>{document.category.name}</span>
-              </>
-            )}
+    <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 2xl:px-8">
+      <nav className="mb-4 flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Link to="/" className="hover:text-primary">
+          知识首页
+        </Link>
+        {document.space && (
+          <>
             <ChevronRight className="h-3 w-3" />
-            <span className="truncate text-foreground/70">{document.title}</span>
-          </nav>
+            <Link
+              to="/spaces/$slug"
+              params={{ slug: document.space.slug }}
+              className="hover:text-primary"
+            >
+              {document.space.name}
+            </Link>
+          </>
+        )}
+        {document.category && (
+          <>
+            <ChevronRight className="h-3 w-3" />
+            <span>{document.category.name}</span>
+          </>
+        )}
+        <ChevronRight className="h-3 w-3" />
+        <span className="truncate text-foreground/70">{document.title}</span>
+      </nav>
 
-          <article className="rounded-lg border border-border bg-surface p-6 shadow-sm sm:p-8">
-            {document.status === 'draft' && (
-              <div className="mb-4 rounded-md border border-yellow-500/30 bg-yellow-50 px-3 py-2 text-sm text-yellow-800 dark:bg-yellow-950/30 dark:text-yellow-200">
-                草稿，仅创建者可见
+      <div className="flex gap-8">
+        <main className="min-w-0 flex-1">
+          <div className="mx-auto w-full max-w-3xl">
+            <article className="rounded-lg border border-border bg-surface p-6 shadow-sm sm:p-8">
+              {document.status === 'draft' && (
+                <div className="mb-4 rounded-md border border-yellow-500/30 bg-yellow-50 px-3 py-2 text-sm text-yellow-800 dark:bg-yellow-950/30 dark:text-yellow-200">
+                  草稿，仅创建者可见
+                </div>
+              )}
+
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <h1 className="text-3xl font-bold leading-tight tracking-tight">{document.title}</h1>
+                {isAuthor && (
+                  <Link
+                    to="/documents/$slug/edit"
+                    params={{ slug: document.slug }}
+                    className="inline-flex h-9 shrink-0 items-center gap-1 rounded-md border border-border px-3 text-sm font-medium transition-colors hover:bg-secondary"
+                  >
+                    <Edit className="h-3.5 w-3.5" />
+                    编辑
+                  </Link>
+                )}
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border pb-5 text-sm text-muted-foreground">
+                <span className="inline-flex items-center gap-1">
+                  <UserRound className="h-3.5 w-3.5" />
+                  {document.creator.displayName ?? document.creator.username}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <Clock className="h-3.5 w-3.5" />
+                  <time dateTime={document.updatedAt}>
+                    {new Date(document.updatedAt).toLocaleString('zh-CN', {
+                      year: 'numeric',
+                      month: '2-digit',
+                      day: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </time>
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <Eye className="h-3.5 w-3.5" />
+                  {document.viewCount} 次查看
+                </span>
+              </div>
+
+              {document.tags.length > 0 && (
+                <div className="mt-5 flex flex-wrap gap-1.5">
+                  {document.tags.map((tag) => (
+                    <TagPill key={tag} name={tag} />
+                  ))}
+                </div>
+              )}
+
+              <div
+                className="prose-docbase mt-6"
+                // biome-ignore lint/security/noDangerouslySetInnerHtml: document content is sanitized server-side.
+                dangerouslySetInnerHTML={{ __html: document.contentHtml }}
+              />
+            </article>
+
+            {isAuthor && (
+              <div className="mt-6 flex justify-end">
+                <DeleteDocumentButton documentId={document.id} />
               </div>
             )}
+          </div>
+        </main>
 
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <h1 className="text-3xl font-bold leading-tight tracking-tight">{document.title}</h1>
-              {isAuthor && (
-                <Link
-                  to="/documents/$slug/edit"
-                  params={{ slug: document.slug }}
-                  className="inline-flex h-9 shrink-0 items-center gap-1 rounded-md border border-border px-3 text-sm font-medium transition-colors hover:bg-secondary"
-                >
-                  <Edit className="h-3.5 w-3.5" />
-                  编辑
-                </Link>
+        <ScrollToTop />
+
+        <aside className="hidden w-72 shrink-0 xl:block">
+          <div className="sticky top-20 space-y-4">
+            <div className="rounded-lg border border-border bg-surface p-4 text-sm">
+              <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <Hash className="h-3.5 w-3.5" />
+                文档目录
+              </div>
+              {headings.length > 0 ? (
+                <nav className="space-y-1">
+                  {headings.map((heading, index) => (
+                    <a
+                      key={`${heading.text}-${index}`}
+                      href={`#${heading.id}`}
+                      className="block rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
+                      style={{ paddingLeft: `${8 + (heading.level - 1) * 10}px` }}
+                    >
+                      {heading.text}
+                    </a>
+                  ))}
+                </nav>
+              ) : (
+                <p className="text-sm text-muted-foreground">正文暂无标题结构</p>
               )}
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border pb-5 text-sm text-muted-foreground">
-              <span className="inline-flex items-center gap-1">
-                <UserRound className="h-3.5 w-3.5" />
-                {document.creator.displayName ?? document.creator.username}
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5" />
-                <time dateTime={document.updatedAt}>
-                  {new Date(document.updatedAt).toLocaleString('zh-CN', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </time>
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <Eye className="h-3.5 w-3.5" />
-                {document.viewCount} 次查看
-              </span>
-            </div>
-
-            {document.tags.length > 0 && (
-              <div className="mt-5 flex flex-wrap gap-1.5">
-                {document.tags.map((tag) => (
-                  <TagPill key={tag} name={tag} />
-                ))}
+            <div className="rounded-lg border border-border bg-surface p-4 text-sm">
+              <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <Info className="h-3.5 w-3.5" />
+                维护信息
               </div>
-            )}
-
-            <div
-              className="prose-docbase mt-6"
-              // biome-ignore lint/security/noDangerouslySetInnerHtml: document content is sanitized server-side.
-              dangerouslySetInnerHTML={{ __html: document.contentHtml }}
-            />
-          </article>
-
-          {isAuthor && (
-            <div className="mt-6 flex justify-end">
-              <DeleteDocumentButton documentId={document.id} />
+              <dl className="space-y-2">
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted-foreground">空间</dt>
+                  <dd className="text-right font-medium">{document.space?.name ?? '-'}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted-foreground">分类</dt>
+                  <dd className="text-right font-medium">{document.category?.name ?? '-'}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted-foreground">状态</dt>
+                  <dd className="text-right font-medium">
+                    {document.status === 'published' ? '已发布' : '草稿'}
+                  </dd>
+                </div>
+              </dl>
             </div>
-          )}
-        </div>
-      </main>
-
-      <aside className="hidden w-72 shrink-0 xl:block">
-        <div className="sticky top-20 space-y-4">
-          <div className="rounded-lg border border-border bg-surface p-4 text-sm">
-            <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              <Hash className="h-3.5 w-3.5" />
-              文档目录
-            </div>
-            {headings.length > 0 ? (
-              <nav className="space-y-1">
-                {headings.map((heading, index) => (
-                  <a
-                    key={`${heading.text}-${index}`}
-                    href={`#${heading.id}`}
-                    className="block rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
-                    style={{ paddingLeft: `${8 + (heading.level - 1) * 10}px` }}
-                  >
-                    {heading.text}
-                  </a>
-                ))}
-              </nav>
-            ) : (
-              <p className="text-sm text-muted-foreground">正文暂无标题结构</p>
-            )}
           </div>
-
-          <div className="rounded-lg border border-border bg-surface p-4 text-sm">
-            <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              <Info className="h-3.5 w-3.5" />
-              维护信息
-            </div>
-            <dl className="space-y-2">
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">空间</dt>
-                <dd className="text-right font-medium">{document.space?.name ?? '-'}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">分类</dt>
-                <dd className="text-right font-medium">{document.category?.name ?? '-'}</dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">状态</dt>
-                <dd className="text-right font-medium">
-                  {document.status === 'published' ? '已发布' : '草稿'}
-                </dd>
-              </div>
-            </dl>
-          </div>
-        </div>
-      </aside>
+        </aside>
+      </div>
     </div>
   )
 }

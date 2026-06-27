@@ -31,8 +31,10 @@ export async function contextFromHeaders(headers: Headers): Promise<ServiceConte
   }
 
   // The api-key plugin's verifyApiKey needs the key in the body. When the
-  // CLI sends `x-api-key`, we forward it to verifyApiKey directly.
-  const apiKeyHeader = headers.get('x-api-key')
+  // CLI sends `x-api-key` OR `Authorization: Bearer <key>`, we forward it to
+  // verifyApiKey directly.
+  const apiKeyHeader =
+    headers.get('x-api-key') ?? parseBearerToken(headers.get('authorization'))
   if (apiKeyHeader) {
     const apiKey = (await auth.api.verifyApiKey({
       body: { key: apiKeyHeader },
@@ -45,6 +47,18 @@ export async function contextFromHeaders(headers: Headers): Promise<ServiceConte
   }
 
   throw Errors.unauthenticated()
+}
+
+/**
+ * Extract a bearer token from an `Authorization: Bearer <token>` header
+ * (RFC 6750). Case-insensitive scheme. Returns null if header is absent or
+ * not in bearer form.
+ */
+function parseBearerToken(header: string | null): string | null {
+  if (!header) return null
+  const [scheme, token, ...rest] = header.trim().split(/\s+/)
+  if (!scheme || scheme.toLowerCase() !== 'bearer' || !token || rest.length > 0) return null
+  return token
 }
 
 /**

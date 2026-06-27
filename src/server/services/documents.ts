@@ -337,14 +337,21 @@ async function toSummary(row: {
 async function replaceDocumentTags(documentId: string, names: string[]) {
   await db.delete(schema.documentTag).where(eq(schema.documentTag.documentId, documentId))
   for (const name of names) {
-    let tagRow = await db.query.tag.findFirst({ where: eq(schema.tag.name, name) })
+    const slug = slugify(name)
+    // Look up by slug (unique, normalized) — name uniqueness doesn't help
+    // when callers use mixed-case variants that collide on slug.
+    let tagRow = await db.query.tag.findFirst({ where: eq(schema.tag.slug, slug) })
     if (!tagRow) {
       const [inserted] = await db
         .insert(schema.tag)
-        .values({ name, slug: slugify(name) })
+        .values({ name, slug })
+        .onConflictDoNothing({ target: schema.tag.slug })
         .returning()
-      if (!inserted) throw Errors.internal('标签创建失败')
-      tagRow = inserted
+      // onConflictDoNothing returns no row on conflict — re-fetch.
+      tagRow =
+        inserted ??
+        (await db.query.tag.findFirst({ where: eq(schema.tag.slug, slug) }))
+      if (!tagRow) throw Errors.internal('标签创建失败')
     }
     await db
       .insert(schema.documentTag)
@@ -354,13 +361,17 @@ async function replaceDocumentTags(documentId: string, names: string[]) {
 }
 
 function extractExcerpt(doc: unknown): string {
-  try {
-    return JSON.stringify(doc)
-      .replace(/<[^>]*>/g, ' ')
-      .replace(/[{}"\\[\\],:、。,.\s]+/g, ' ')
-      .trim()
-      .slice(0, 280)
-  } catch {
-    return ''
+  // Walk the TipTap JSON tree and concatenate all text nodes. Avoids the
+  // previous implementation's mistake of `JSON.stringify`-ing the whole
+  // tree and regex-replacing brackets — that stored a corrupted half-JSON
+  // half-text blob into the `excerpt` column.
+  const texts: string[] = []
+  const walk = (node: unknown): void => {
+    if (!node || typeof node !== 'object') return
+    const n = node as { text?: unknown; content?: unknown[] }
+    if (typeof n.text === 'string') texts.push(n.text)
+    if (Array.isArray(n.content)) n.content.forEach(walk)
   }
+  walk(doc)
+  return texts.join(' ').replace(/\s+/g, ' ').trim().slice(0, 280)
 }

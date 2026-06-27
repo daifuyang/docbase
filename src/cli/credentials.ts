@@ -4,6 +4,10 @@
  * Stores the API key + user identity on disk so subsequent CLI invocations
  * don't need to sign in again. Path defaults to the XDG config dir
  * (~/.config/docbase/credentials.json) and is chmod 0o600 on POSIX.
+ *
+ * SECURITY: the file grants the same access as the user's account.
+ * Anyone who can read the file can impersonate the user until `expiresAt`.
+ * 0o600 is the only mitigation; rotate via `auth login` if compromised.
  */
 import { chmodSync, existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'

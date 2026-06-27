@@ -10,6 +10,7 @@ import {
   getDocumentBySlugService,
   listDocumentsService,
   listMyDocumentsService,
+  readDocumentDetailBySlugService,
   updateDocumentService,
 } from '~/server/services/documents'
 import {
@@ -30,6 +31,17 @@ export const getDocumentBySlug = createServerFn({ method: 'GET' })
   .validator(z.object({ slug: z.string().min(1) }))
   .handler(async ({ data }) =>
     getDocumentBySlugService(await contextFromHeaders(getRequestHeaders()), data),
+  )
+
+/**
+ * Read-only fetch that does NOT bump the view counter. Use this for any
+ * context where the user is interacting with the document but not actually
+ * viewing it (edit page, autosave preview, comment composer, etc.).
+ */
+export const readDocumentBySlug = createServerFn({ method: 'GET' })
+  .validator(z.object({ slug: z.string().min(1) }))
+  .handler(async ({ data }) =>
+    readDocumentDetailBySlugService(await contextFromHeaders(getRequestHeaders()), data),
   )
 
 export const createDocument = createServerFn({ method: 'POST' })

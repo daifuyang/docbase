@@ -15,6 +15,10 @@ export const Route = createFileRoute('/')({
     return { me }
   },
   loader: async () => {
+    // Re-fetch `me` here so HomePage can read the display name without
+    // reaching into root context. beforeLoad guarantees the user is signed
+    // in by the time the loader runs, so `getCurrentUser()` will not be null.
+    const me = await getCurrentUser()
     const [documents, drafts, spaces, tags] = await Promise.all([
       listDocuments({ data: { page: 1, pageSize: 12 } }),
       listMyDocuments({ data: { status: 'draft', page: 1, pageSize: 5 } }),
@@ -22,6 +26,7 @@ export const Route = createFileRoute('/')({
       listTags({ data: { limit: 12 } }),
     ])
     return {
+      me,
       documents: documents.items,
       drafts: drafts.items,
       spaces: spaces.items,
@@ -36,14 +41,18 @@ export const Route = createFileRoute('/')({
 })
 
 function HomePage() {
-  const { documents, drafts, spaces, total, tags } = Route.useLoaderData()
+  const { me, documents, drafts, spaces, total, tags } = Route.useLoaderData()
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 2xl:px-8">
       <header className="mb-5 border-b border-border pb-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">知识库工作台</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              {me?.displayName
+                ? `${me.displayName}，欢迎回到知识库`
+                : '欢迎回到知识库'}
+            </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               {formatHomeSummary(total, spaces.length)}。优先处理草稿、维护空间，再查阅最近更新。
             </p>
@@ -196,12 +205,6 @@ function EmptyState() {
       </div>
       <h2 className="text-lg font-semibold">还没有内部文档</h2>
       <p className="mt-1 text-sm text-muted-foreground">先沉淀一篇制度、复盘或项目说明</p>
-      <Link
-        to="/documents/new"
-        className="mt-4 inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary-hover"
-      >
-        新建文档
-      </Link>
     </div>
   )
 }

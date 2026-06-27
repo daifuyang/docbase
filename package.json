@@ -14,6 +14,7 @@
     "build": "vite build",
     "start": "node .output/server/index.mjs",
     "cli": "tsx src/cli/index.ts",
+    "build:cli": "bun build --compile --target bun --outfile dist/docbase src/cli/index.ts",
     "typecheck": "tsc --noEmit",
     "lint": "biome check --write .",
     "lint:check": "biome check .",
@@ -31,6 +32,7 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@asteasolutions/zod-to-openapi": "^8.5.0",
     "@better-auth/api-key": "^1.6.22",
     "@radix-ui/react-avatar": "^1.2.0",
     "@radix-ui/react-dialog": "^1.1.17",

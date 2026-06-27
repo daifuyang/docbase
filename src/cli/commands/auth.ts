@@ -3,16 +3,13 @@
  */
 import type { Command } from 'commander'
 import { Errors } from '~/lib/errors'
-import { clearCredentials, credentialsPath, loadCredentials, saveCredentials } from '../credentials'
-import type { OutputOpts } from '../types'
-import { formatOutput, printInfo } from '../output'
-import { promptHidden } from '../prompt'
 import { revokeApiKeyService } from '~/server/services/auth'
 import { contextFromHeaders } from '~/server/services/context'
+import { clearCredentials, loadCredentials, saveCredentials } from '../credentials'
 import { ApiClient } from '../api-client'
-
-const COOKIE_NAME = 'docbase.session_token'
-void COOKIE_NAME // referenced below
+import { formatOutput, printInfo } from '../output'
+import { promptHidden } from '../prompt'
+import type { OutputOpts } from '../types'
 
 export function registerAuthCommands(program: Command): void {
   const auth = program.command('auth').description('认证与 API Key 管理')
@@ -30,11 +27,6 @@ export function registerAuthCommands(program: Command): void {
       const password = opts.password ?? (await promptHidden('Password: '))
       const api = new ApiClient()
       const signInResult = await api.signIn(username, password)
-      if (!signInResult.session.cookieValue) {
-        throw Errors.internal(
-          '登录成功但未获取到会话 Cookie（请确认 BETTER_AUTH_URL 与 cookie 域名一致）',
-        )
-      }
       const apiKey = await api.createApiKey({
         userId: signInResult.user.id,
         name: opts.name ?? 'cli',
@@ -43,6 +35,7 @@ export function registerAuthCommands(program: Command): void {
         apiKey: apiKey.key,
         apiKeyId: apiKey.id,
         prefix: apiKey.prefix,
+        expiresAt: apiKey.expiresAt,
         user: {
           id: signInResult.user.id,
           username: signInResult.user.username,
@@ -55,7 +48,6 @@ export function registerAuthCommands(program: Command): void {
         `Logged in as ${signInResult.user.username}. API key stored at ${path}`,
         globalOpts,
       )
-      void COOKIE_NAME
     })
 
   auth
@@ -63,7 +55,7 @@ export function registerAuthCommands(program: Command): void {
     .description('查看当前登录的用户')
     .action(async () => {
       const globalOpts = program.opts<OutputOpts>()
-      const api = new (await import('../api-client')).ApiClient()
+      const api = new ApiClient()
       const user = await api.whoami()
       formatOutput(user, globalOpts)
     })
@@ -91,7 +83,5 @@ export function registerAuthCommands(program: Command): void {
       }
       clearCredentials()
       printInfo('Logged out.', globalOpts)
-      // suppress unused warning
-      void credentialsPath
     })
 }

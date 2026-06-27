@@ -45,6 +45,16 @@ export const auth = betterAuth({
       apiKeyHeaders: ['x-api-key'],
       enableMetadata: true,
       defaultPrefix: 'docbase_',
+      // better-auth's documented default is 24h / 10 req — too strict for
+      // batch CLI scripts (every `pnpm cli xxx` invocation counts as one).
+      // The "secret" preset from the official docs is 1h / 1000 req, which
+      // is enough headroom for any realistic CLI session while still
+      // throttling brute-force attempts against a leaked key.
+      rateLimit: {
+        enabled: true,
+        timeWindow: 60 * 60 * 1000, // 1 hour
+        maxRequests: 1000,
+      },
     }),
   ],
   // Custom additional fields that we need in the user table.

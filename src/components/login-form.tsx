@@ -1,7 +1,7 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, useRouter } from '@tanstack/react-router'
 import { useServerFn } from '@tanstack/react-start'
 import { Eye, EyeOff } from 'lucide-react'
 import { useState, useTransition } from 'react'
@@ -21,6 +21,7 @@ function getErrorField(error: unknown, field: 'code' | 'message') {
 }
 
 export function LoginForm() {
+  const router = useRouter()
   const navigate = useNavigate()
   const signInFn = useServerFn(signIn)
   const [serverError, setServerError] = useState<string | null>(null)
@@ -41,6 +42,11 @@ export function LoginForm() {
     startTransition(async () => {
       try {
         await signInFn({ data: values })
+        // Force all matched loaders (incl. __root__) to rerun so they pick up
+        // the fresh session cookie set by signIn. Without this, root loader's
+        // cached `me: null` (and the empty tags/spaces that depend on it) is
+        // reused after navigate, leaving the home page stale until manual F5.
+        await router.invalidate()
         navigate({ to: '/' })
       } catch (e: unknown) {
         const code = getErrorField(e, 'code')
