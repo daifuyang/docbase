@@ -20,9 +20,15 @@ export type ServiceContext = {
 }
 
 /**
- * Build a ServiceContext from request headers. Tries session cookie
- * first (the Web's normal path); falls back to the `x-api-key` header
- * (the CLI's path, validated by the @better-auth/api-key plugin).
+ * Build a ServiceContext from request headers. Tries, in order:
+ *   1. Session cookie (web's normal path) via `getSession`
+ *   2. `x-api-key` header → better-auth apiKey plugin
+ *   3. `Authorization: Bearer <token>`:
+ *      - first try apiKey plugin (the CLI's distributed binary uses this
+ *        to send its API Key)
+ *      - then fall back to looking the token up directly in the `session`
+ *        table — the CLI's distributed binary also supports session
+ *        tokens obtained via `auth login` (HTTP-mode credential).
  */
 export async function contextFromHeaders(headers: Headers): Promise<ServiceContext> {
   const session = await auth.api.getSession({ headers })
@@ -30,11 +36,8 @@ export async function contextFromHeaders(headers: Headers): Promise<ServiceConte
     return { userId: session.user.id, headers, authKind: 'session' }
   }
 
-  // The api-key plugin's verifyApiKey needs the key in the body. When the
-  // CLI sends `x-api-key` OR `Authorization: Bearer <key>`, we forward it to
-  // verifyApiKey directly.
-  const apiKeyHeader =
-    headers.get('x-api-key') ?? parseBearerToken(headers.get('authorization'))
+  const bearer = parseBearerToken(headers.get('authorization'))
+  const apiKeyHeader = headers.get('x-api-key') ?? bearer
   if (apiKeyHeader) {
     const apiKey = (await auth.api.verifyApiKey({
       body: { key: apiKeyHeader },
@@ -43,6 +46,21 @@ export async function contextFromHeaders(headers: Headers): Promise<ServiceConte
       | { valid: false; key: null }
     if (apiKey?.valid && apiKey.key?.referenceId) {
       return { userId: apiKey.key.referenceId, headers, authKind: 'apiKey' }
+    }
+  }
+
+  // Bearer didn't validate as an API key — try the session table directly.
+  if (bearer) {
+    const now = new Date()
+    const sessionRow = await db.query.session.findFirst({
+      where: eq(schema.session.token, bearer),
+    })
+    if (sessionRow && sessionRow.expiresAt > now) {
+      return {
+        userId: sessionRow.userId,
+        headers,
+        authKind: 'session',
+      }
     }
   }
 

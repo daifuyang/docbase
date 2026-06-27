@@ -1,36 +1,18 @@
 /**
- * Thin wrapper around the service layer.
+ * Thin HTTP client for the DocBase server's CLI API.
  *
- * Two modes:
- * - In-process (default): builds a `ServiceContext` from the saved API key
- *   and calls `src/server/services/*` directly. Requires full source +
- *   node_modules + a working .env on the same machine as the database.
- * - HTTP (when `serverUrl` is set): round-trips to the running DocBase
- *   server via `/api/v1/cli/*` endpoints. Only needs network access to the
- *   server + a valid API Key on this machine. See `docs/cli.md` for setup.
+ * When `--server <url>` (or `DOCABASE_SERVER`) is set, every operation
+ * round-trips to `/api/v1/cli/*` endpoints on that server. The CLI binary
+ * distributed via GitHub Releases is built with `bun build --compile` and
+ * is HTTP-only — it intentionally does NOT import the in-process service
+ * layer (which depends on better-auth + TanStack Start virtual modules)
+ * so the binary stays self-contained and small.
+ *
+ * For local dev / in-process mode, run the source via `pnpm cli` (tsx).
  *
  * Auth failures (no credentials / invalid key / expired key / server 401)
  * bubble up as ServerError so `errors.ts` can map them to exit code 4.
  */
-import { contextFromHeaders, type ServiceContext } from '~/server/services/context'
-import {
-  createApiKeyService,
-  getCurrentUserService,
-  signInService,
-} from '~/server/services/auth'
-import {
-  createCategoryService,
-  createSpaceService,
-  listSpacesService,
-} from '~/server/services/spaces'
-import { createTagService, listTagsService } from '~/server/services/tags'
-import {
-  createDocumentService,
-  deleteDocumentService,
-  getDocumentBySlugService,
-  listDocumentsService,
-  updateDocumentService,
-} from '~/server/services/documents'
 import { Errors, ServerError } from '~/lib/errors'
 import { loadCredentials } from './credentials'
 
@@ -54,214 +36,188 @@ function checkExpiry(expiresAt: string | null): void {
   }
 }
 
+/**
+ * Build an ApiClient from program-level opts. Throws if `--server` /
+ * DOCABASE_SERVER is missing — every CLI command now needs a remote
+ * server (HTTP-only mode).
+ */
+export function makeApiClient(program: { opts: () => { server?: string } }): ApiClient {
+  const raw = program.opts().server ?? process.env.DOCBASE_SERVER
+  if (!raw) {
+    throw Errors.internal(
+      'CLI 当前为 HTTP-only 模式：需要 --server <url> 或 DOCABASE_SERVER=<url>',
+    )
+  }
+  return new ApiClient(raw.replace(/\/+$/, ''))
+}
+
 export class ApiClient {
-  private ctxPromise: Promise<ServiceContext> | null = null
+  constructor(private readonly serverUrl: string) {}
 
-  constructor(serverUrl?: string) {
-    // Allow callers to pass nothing — we'll pick up `DOCBASE_SERVER` from
-    // the env (set by `--server` flag via program.hook('preAction')).
-    if (!serverUrl) {
-      const envUrl = process.env.DOCBASE_SERVER
-      if (envUrl) serverUrl = envUrl.replace(/\/+$/, '')
-    }
-    this.serverUrl = serverUrl
-  }
+  whoami = async () => this.http('GET', '/api/v1/cli/auth/whoami')
 
-  private readonly serverUrl?: string
-
-  /** True when constructed with a `--server` URL — every call goes over HTTP. */
-  private get isHttp(): boolean {
-    return Boolean(this.serverUrl)
-  }
-
-  // ----------------------------------------------------------------
-  // In-process path (only used when no `--server` is configured)
-  // ----------------------------------------------------------------
-  async context(): Promise<ServiceContext> {
-    if (this.isHttp) {
-      throw Errors.internal(
-        'context() called in HTTP mode; use whoami()/listSpaces() etc. directly',
-      )
-    }
-    if (this.ctxPromise) return this.ctxPromise
-    this.ctxPromise = (async () => {
-      const creds = loadCredentials()
-      if (!creds) {
-        throw Errors.unauthenticated('未登录，请先运行 `docbase auth login`')
+  /**
+   * Sign in via HTTP. Does NOT require existing credentials (we're
+   * creating them). Bypasses `http()`'s credential check by calling
+   * fetch directly.
+   */
+  signIn = async (account: string, password: string) => {
+    const url = new URL('/api/v1/cli/auth/login', this.serverUrl)
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ account, password }),
+    })
+    if (!res.ok) throw await mapHttpError(res)
+    return (await res.json()) as {
+      user: {
+        id: string
+        username: string
+        displayName: string | null
+        bio: string | null
+        role: 'admin' | 'member'
+        createdAt: string
       }
-      checkExpiry(creds.expiresAt)
-      const headers = new Headers()
-      headers.set('x-api-key', creds.apiKey)
-      return contextFromHeaders(headers)
-    })()
-    return this.ctxPromise
-  }
-
-  // ----------------------------------------------------------------
-  // Auth (login itself is in-process — it must reach the DB to issue a key)
-  // ----------------------------------------------------------------
-  async signIn(account: string, password: string) {
-    if (this.isHttp) {
-      return this.http<Awaited<ReturnType<typeof signInService>>>(
-        'POST',
-        '/api/v1/cli/auth/login',
-        { account, password },
-      )
+      session: { token: string; expiresAt: string }
     }
-    return signInService({ account, password })
   }
 
-  async createApiKey(opts: { userId: string; name?: string }) {
-    return createApiKeyService({ userId: opts.userId, name: opts.name })
-  }
-
-  whoami = async () => {
-    if (this.isHttp) {
-      return this.http<Awaited<ReturnType<typeof getCurrentUserService>>>(
-        'GET',
-        '/api/v1/cli/auth/whoami',
-      )
+  /**
+   * Server-side session revocation. Best-effort — used during logout.
+   * Skips the expiry check so an expired token can still be sent.
+   */
+  logout = async () => {
+    const creds = loadCredentials()
+    const url = new URL('/api/v1/cli/auth/logout', this.serverUrl)
+    const headers: Record<string, string> = {}
+    if (creds) headers.Authorization = `Bearer ${creds.sessionToken}`
+    const res = await fetch(url, { method: 'POST', headers })
+    if (!res.ok && res.status !== 401) {
+      throw await mapHttpError(res)
     }
-    return this.context().then((c) => getCurrentUserService(c))
   }
 
-  // ----------------------------------------------------------------
-  // Spaces / Categories / Tags
-  // ----------------------------------------------------------------
-  listSpaces = async () => {
-    if (this.isHttp) {
-      return this.http<Awaited<ReturnType<typeof listSpacesService>>>(
-        'GET',
-        '/api/v1/cli/spaces',
-      )
-    }
-    return this.context().then((c) => listSpacesService(c))
-  }
+  listSpaces = async () =>
+    this.http<{
+      items: Array<{ id: string; name: string; slug: string; description: string | null }>
+    }>('GET', '/api/v1/cli/spaces')
 
-  createSpace = async (input: { name: string; description?: string }) => {
-    if (this.isHttp) {
-      return this.http<Awaited<ReturnType<typeof createSpaceService>>>(
-        'POST',
-        '/api/v1/cli/spaces',
-        input,
-      )
-    }
-    return this.context().then((c) => createSpaceService(c, input))
-  }
+  createSpace = async (input: { name: string; description?: string }) =>
+    this.http<{ space: { id: string; name: string; slug: string } }>(
+      'POST',
+      '/api/v1/cli/spaces',
+      input,
+    )
 
-  createCategory = async (input: { spaceId: string; name: string; description?: string }) => {
-    if (this.isHttp) {
-      const { spaceId, ...body } = input
-      return this.http<Awaited<ReturnType<typeof createCategoryService>>>(
-        'POST',
-        `/api/v1/cli/spaces/${spaceId}/categories`,
-        body,
-      )
-    }
-    return this.context().then((c) => createCategoryService(c, input))
-  }
+  listCategories = async (spaceId: string) =>
+    this.http<{
+      items: Array<{
+        id: string
+        spaceId: string
+        name: string
+        slug: string
+        description: string | null
+      }>
+    }>('GET', `/api/v1/cli/spaces/${spaceId}/categories`)
 
-  listCategories = async () => {
-    if (this.isHttp) {
-      // Server doesn't yet have a flat listCategories endpoint — only per-space.
-      // For HTTP mode callers, prefer iterating per-space or going through
-      // listSpaces then listCategoriesBySpace per space.
-      throw Errors.internal(
-        'listCategories() not yet supported in HTTP mode — query per-space instead',
-      )
-    }
-    const { listCategoriesService } = await import('~/server/services/spaces')
-    return this.context().then((c) => listCategoriesService(c))
+  createCategory = async (input: {
+    spaceId: string
+    name: string
+    description?: string
+  }) => {
+    const { spaceId, ...body } = input
+    return this.http<{ category: { id: string; name: string; slug: string } }>(
+      'POST',
+      `/api/v1/cli/spaces/${spaceId}/categories`,
+      body,
+    )
   }
 
   listTags = async (limit?: number) => {
-    if (this.isHttp) {
-      const qs = limit ? `?limit=${encodeURIComponent(limit)}` : ''
-      return this.http<Awaited<ReturnType<typeof listTagsService>>>(
-        'GET',
-        `/api/v1/cli/tags${qs}`,
-      )
-    }
-    return this.context().then((c) => listTagsService(c, { limit }))
+    const qs = limit ? `?limit=${encodeURIComponent(limit)}` : ''
+    return this.http<{ items: Array<{ id: string; name: string; slug: string }> }>(
+      'GET',
+      `/api/v1/cli/tags${qs}`,
+    )
   }
 
-  createTag = async (input: { name: string }) => {
-    if (this.isHttp) {
-      return this.http<Awaited<ReturnType<typeof createTagService>>>(
-        'POST',
-        '/api/v1/cli/tags',
-        input,
-      )
-    }
-    return this.context().then((c) => createTagService(c, input))
-  }
+  createTag = async (input: { name: string }) =>
+    this.http<{ tag: { id: string; name: string; slug: string } }>(
+      'POST',
+      '/api/v1/cli/tags',
+      input,
+    )
 
-  // ----------------------------------------------------------------
-  // Documents
-  // ----------------------------------------------------------------
   listDocuments = async (input: Record<string, unknown>) => {
-    if (this.isHttp) {
-      const qs = new URLSearchParams(
-        Object.entries(input).filter(([, v]) => v != null) as [string, string][],
-      ).toString()
-      return this.http<Awaited<ReturnType<typeof listDocumentsService>>>(
-        'GET',
-        `/api/v1/cli/documents${qs ? `?${qs}` : ''}`,
-      )
-    }
-    // biome-ignore lint/suspicious/noExplicitAny: forwarded to existing typed service
-    return this.context().then((c) => listDocumentsService(c, input as any))
+    const qs = new URLSearchParams(
+      Object.entries(input).filter(([, v]) => v != null) as [string, string][],
+    ).toString()
+    return this.http<{
+      items: Array<{
+        id: string
+        title: string
+        slug: string
+        excerpt: string | null
+        status: 'draft' | 'published'
+        spaceId: string | null
+        categoryId: string | null
+        updatedAt: string
+      }>
+      total: number
+      page: number
+      pageSize: number
+    }>('GET', `/api/v1/cli/documents${qs ? `?${qs}` : ''}`)
   }
 
-  getDocument = async (slug: string) => {
-    if (this.isHttp) {
-      return this.http<Awaited<ReturnType<typeof getDocumentBySlugService>>>(
-        'GET',
-        `/api/v1/cli/documents/${encodeURIComponent(slug)}`,
-      )
-    }
-    return this.context().then((c) => getDocumentBySlugService(c, { slug }))
-  }
+  getDocument = async (slug: string) =>
+    this.http<{
+      id: string
+      title: string
+      slug: string
+      excerpt: string | null
+      status: string
+      contentJson: unknown
+      contentHtml: string
+      space: unknown
+      category: unknown
+      tags: string[]
+      creator: unknown
+      updatedAt: string
+      publishedAt: string | null
+      viewCount: number
+    }>('GET', `/api/v1/cli/documents/${encodeURIComponent(slug)}`)
 
-  createDocument = async (
-    input: Parameters<typeof createDocumentService>[1],
-  ) => {
-    if (this.isHttp) {
-      const { contentJson, ...body } = input as typeof input & { contentJson: unknown }
-      return this.http<Awaited<ReturnType<typeof createDocumentService>>>(
-        'POST',
-        '/api/v1/cli/documents',
-        {
-          ...body,
-          contentMarkdown: input.contentJson ? '' : '',
-          _contentJson: contentJson,
-        },
-      )
-    }
-    return this.context().then((c) => createDocumentService(c, input))
-  }
+  createDocument = async (input: {
+    title: string
+    contentMarkdown: string
+    spaceId: string
+    categoryId?: string
+    status?: 'draft' | 'published'
+    tags?: string[]
+  }) =>
+    this.http<{ document: { id: string; title: string; slug: string; status: string } }>(
+      'POST',
+      '/api/v1/cli/documents',
+      input,
+    )
 
   updateDocument = async (
-    input: Parameters<typeof updateDocumentService>[1],
-  ) => {
-    if (this.isHttp) {
-      // HTTP update takes slug; in-process takes id. Caller's responsibility
-      // to pass a slug if HTTP mode is on.
-      throw Errors.internal(
-        'HTTP mode update requires slug — not yet wired in CLI update commands',
-      )
-    }
-    return this.context().then((c) => updateDocumentService(c, input))
-  }
+    slug: string,
+    input: {
+      title?: string
+      contentMarkdown?: string
+      status?: 'draft' | 'published'
+      tags?: string[]
+    },
+  ) =>
+    this.http<{ document: unknown }>(
+      'PUT',
+      `/api/v1/cli/documents/${encodeURIComponent(slug)}`,
+      input,
+    )
 
-  deleteDocument = async (id: string) => {
-    if (this.isHttp) {
-      throw Errors.internal(
-        'HTTP mode delete requires slug — not yet wired in CLI delete commands',
-      )
-    }
-    return this.context().then((c) => deleteDocumentService(c, { id }))
-  }
+  deleteDocument = async (slug: string) =>
+    this.http<{ ok: true }>('DELETE', `/api/v1/cli/documents/${encodeURIComponent(slug)}`)
 
   // ----------------------------------------------------------------
   // HTTP plumbing
@@ -271,7 +227,7 @@ export class ApiClient {
     if (!creds) {
       throw Errors.unauthenticated('未登录，请先运行 `docbase auth login`')
     }
-    checkExpiry(creds.expiresAt)
+    checkExpiry(creds.sessionExpiresAt)
 
     const url = new URL(path, this.serverUrl)
     let res: Response
@@ -279,21 +235,18 @@ export class ApiClient {
       res = await fetch(url, {
         method,
         headers: {
-          Authorization: `Bearer ${creds.apiKey}`,
+          Authorization: `Bearer ${creds.sessionToken}`,
           'Content-Type': 'application/json',
         },
         body: body !== undefined ? JSON.stringify(body) : undefined,
       })
     } catch (err) {
-      throw Errors.internal(
-        `无法连接 ${url.origin}：${(err as Error).message}`,
-      )
+      throw Errors.internal(`无法连接 ${url.origin}：${(err as Error).message}`)
     }
 
     if (!res.ok) {
       throw await mapHttpError(res)
     }
-    // 204 No Content (e.g. logout) → resolve with empty object cast.
     if (res.status === 204) return {} as T
     return (await res.json()) as T
   }

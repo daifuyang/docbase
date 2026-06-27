@@ -57,6 +57,9 @@ jobs:
           TARGET: ${{ matrix.target }}
         run: |
           mkdir -p dist
+          # CLI is HTTP-only: no service / better-auth / tanstack imports,
+          # so a single `bun build --compile` produces a self-contained
+          # binary per OS/arch.
           bun build --compile \
             --target=bun-${{ matrix.target }} \
             --outfile=dist/docbase-${{ matrix.target }} \

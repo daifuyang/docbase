@@ -2,7 +2,7 @@
  * space list / create / create-category
  */
 import type { Command } from 'commander'
-import { ApiClient } from '../api-client'
+import { makeApiClient } from '../api-client'
 import { formatOutput, printInfo, type OutputOpts } from '../output'
 
 export function registerSpaceCommands(program: Command): void {
@@ -14,7 +14,7 @@ export function registerSpaceCommands(program: Command): void {
     .description('列出所有知识空间')
     .action(async () => {
       const opts = program.opts<OutputOpts>()
-      const api = new ApiClient()
+      const api = makeApiClient(program)
       const result = await api.listSpaces()
       formatOutput(result, opts)
     })
@@ -26,7 +26,7 @@ export function registerSpaceCommands(program: Command): void {
     .option('--description <text>', '空间描述')
     .action(async (opts: { name: string; description?: string }) => {
       const globalOpts = program.opts<OutputOpts>()
-      const api = new ApiClient()
+      const api = makeApiClient(program)
       const result = await api.createSpace({
         name: opts.name,
         description: opts.description,
@@ -43,7 +43,7 @@ export function registerSpaceCommands(program: Command): void {
     .option('--description <text>', '分类描述')
     .action(async (opts: { space: string; name: string; description?: string }) => {
       const globalOpts = program.opts<OutputOpts>()
-      const api = new ApiClient()
+      const api = makeApiClient(program)
 
       const spaces = (await api.listSpaces()).items
       const space = spaces.find((s) => s.slug === opts.space || s.name === opts.space)
