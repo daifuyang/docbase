@@ -61,8 +61,10 @@ export const searchDocumentsSchema = z.object({
   spaceSlug: z.string().optional(),
   categorySlug: z.string().optional(),
   tagSlug: z.string().optional(),
-  page: z.number().int().min(1).default(1),
-  pageSize: z.number().int().min(1).max(50).default(20),
+  // coerce: HTTP query params arrive as strings; coerce so a URL like
+  // `?page=1&pageSize=20` parses to numbers.
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(50).default(20),
 })
 
 export type CreateDocumentInput = z.infer<typeof createDocumentSchema>
