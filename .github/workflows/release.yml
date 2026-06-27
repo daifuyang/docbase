@@ -79,7 +79,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: docbase-${{ matrix.target }}
-          path: dist/docbase-${{ matrix.target }}
+          # Windows target gets a `.exe` suffix appended by bun build
+          path: dist/docbase-${{ matrix.target }}*
           if-no-files-found: error
           retention-days: 14
 
