@@ -22,6 +22,19 @@ export const auth = betterAuth({
   }),
   secret,
   baseURL: process.env.BETTER_AUTH_URL ?? 'http://localhost:3000',
+  // trustedOrigins：白名单 Origin / Host 头。
+  // 必要原因：FC custom.debian12 + fc3 部署时只有 fcapp.run 系统 URL；用户从浏览器
+  // 访问生产域 docbase.zerocmf.com（由 fc3-domain 绑定的自定义域名），
+  // 但任何从 *.fcapp.run 域或本地域直接打过来的请求都会被 better-auth 拦截。
+  // 这里把生产域、本地 dev 端口、FC 系统 URL 都放进白名单，CI 验证也能用。
+  // 多值来源：环境变量 BETTER_AUTH_TRUSTED_ORIGINS（逗号分隔）+ 静态回退。
+  trustedOrigins: [
+    ...(process.env.BETTER_AUTH_TRUSTED_ORIGINS?.split(',').map((s) => s.trim()).filter(Boolean) ?? []),
+    process.env.BETTER_AUTH_URL,
+    'http://localhost:3000',
+    'http://localhost:9000',
+    'https://docbase-web-bwkfqflofz.cn-shanghai.fcapp.run', // FC 系统 URL（仅供调试/回滚时使用）
+  ].filter(Boolean) as string[],
   emailAndPassword: {
     enabled: true,
     autoSignIn: true,
@@ -40,14 +53,13 @@ export const auth = betterAuth({
   plugins: [
     tanstackStartCookies(),
     apiKey({
-      // Header the CLI sends; the web UI uses session cookies.
+      // API clients may send this header; the web UI uses session cookies.
       apiKeyHeaders: ['x-api-key'],
       enableMetadata: true,
       defaultPrefix: 'docbase_',
       // Disable the api-key plugin's default per-key rate limiting so that
-      // CLI tests (and human users running many commands in a session) are
-      // not blocked. Document-creation rate limiting is enforced separately
-      // by src/lib/rate-limit.server.ts at the service layer.
+      // scripted API clients are not blocked. Document-creation rate limiting
+      // is enforced separately by src/lib/rate-limit.server.ts at the service layer.
       rateLimit: { enabled: false },
     }),
   ],

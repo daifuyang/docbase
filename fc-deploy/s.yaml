@@ -72,9 +72,19 @@ resources:
         PORT: '9000'
         # custom.debian12 自带 node22, 但 PATH 必须显式声明 (FC 不保证默认 PATH 包含它)
         PATH: /var/fc/lang/nodejs22/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/sbin:/bin
+        # 安装锁（src/lib/runtime-config.server.ts 的 isInstallLocked() 同时识别
+        # 此 env 和 config/install.lock 文件）。线上必须设 'true'，否则：
+        #   - src/routes/__root.tsx 的 beforeLoad 会把每个请求 redirect 到 /install
+        #   - src/server/services/install.ts 的 assertInstallAllowed 会拒绝一切
+        #     写操作（防止已部署的实例被再次"重新安装"）
+        # 默认 'true'；本地 s local start 时可在 .env 里设 'false' 走安装向导。
+        DOCBASE_INSTALLED: 'true'
         DATABASE_URL: ${env(DATABASE_URL)}
         REDIS_URL: ${env(REDIS_URL)}
         BETTER_AUTH_SECRET: ${env(BETTER_AUTH_SECRET)}
         BETTER_AUTH_URL:    ${env(BETTER_AUTH_URL)}
         PUBLIC_APP_URL:     ${env(PUBLIC_APP_URL)}
+        # better-auth 信任的 Origin / Host 白名单（逗号分隔）。多个域时一起填，
+        # 比如：'https://docbase.zerocmf.com,https://docbase.example.cn'
+        BETTER_AUTH_TRUSTED_ORIGINS: ${env(BETTER_AUTH_TRUSTED_ORIGINS)}
         LOG_LEVEL:          info
