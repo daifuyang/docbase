@@ -89,19 +89,38 @@ async function main() {
   await fs.chmod(path.join(OUT, 'bootstrap'), 0o755)
   console.log('  ✓ bootstrap copied (+x)')
 
-  // 5) package.json（合成 deps + devDeps）
-  // vite build 把 react / @tanstack/* / drizzle / dotenv 等设为 external，
-  // 运行时 /code/node_modules 必须能解析这些包；缺一个就 ERR_MODULE_NOT_FOUND。
+  // 5) package.json（production deps + vite 外部化的少量 devDeps）
+  // fc-server.mjs 只 import http/stream/./dist/server/server.js；dist/server/
+  // 的 vite bundle 把 react/@tanstack/*/drizzle/ioredis/postgres/sanitize-html
+  // 等运行时依赖设为 external——这些全部来自 root 的 dependencies。
+  //
+  // 但 vite 也会把一部分 devDeps 外部化（dist 里的 from 'dotenv' / from
+  // '@hookform/resolvers/zod' 等），需要在 fc-deploy 这边补上。其余 devDeps
+  // （biome / playwright / vitest / husky / tailwindcss / vite / ...）FC 上用不到，
+  // 不合并进来。
   const repoPkg = JSON.parse(
     await fs.readFile(path.join(ROOT, 'package.json'), 'utf8'),
   )
+  // 这些包在 root devDeps 里，但被 vite 外部化后 dist bundle 运行时需要
+  const runtimeOnlyDevDeps = ['@hookform/resolvers', 'dotenv']
+  for (const name of runtimeOnlyDevDeps) {
+    if (!repoPkg.devDependencies?.[name]) {
+      throw new Error(
+        `build-fc: runtime-only devDep "${name}" not found in root devDependencies; ` +
+          `either add it back to package.json or remove it from the runtimeOnlyDevDeps list`,
+      )
+    }
+  }
   const fcPkg = {
     name: 'docbase-fc-deploy',
     version: repoPkg.version,
     private: true,
     type: 'module',
     engines: { node: '>=20' },
-    dependencies: { ...repoPkg.dependencies, ...repoPkg.devDependencies },
+    dependencies: {
+      ...repoPkg.dependencies,
+      ...Object.fromEntries(runtimeOnlyDevDeps.map((k) => [k, repoPkg.devDependencies[k]])),
+    },
   }
   await fs.writeFile(path.join(OUT, 'package.json'), JSON.stringify(fcPkg, null, 2))
   console.log('  ✓ package.json copied (with all prod deps)')
