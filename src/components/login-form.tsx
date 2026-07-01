@@ -41,7 +41,7 @@ export function LoginForm() {
     startTransition(async () => {
       try {
         await signInFn({ data: values })
-        window.location.href = '/'
+        navigate({ to: '/' })
       } catch (err: unknown) {
         const code = getErrorField(err, 'code')
         if (code === 'INVALID_CREDENTIALS') setServerError('账号或密码错误')
