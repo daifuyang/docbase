@@ -14,6 +14,8 @@
     "build": "vite build",
     "start": "node dist/server/server.js",
     "build:fc": "node scripts/build-fc.mjs",
+    "build:fc:local": "pnpm build && node scripts/build-fc.mjs",
+    "deploy:local": "s -t fc-deploy/s.yaml local start",
     "deploy": "pnpm build && pnpm build:fc && npx -p @serverless-devs/s s deploy -f s.yaml -y",
     "deploy:dry": "npx -p @serverless-devs/s s plan -f s.yaml",
     "deploy:info": "npx -p @serverless-devs/s s info -f s.yaml",
@@ -108,6 +110,18 @@
   "lint-staged": {
     "*.{ts,tsx,js,jsx,json,md}": [
       "biome check --write"
+    ]
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@biomejs/biome",
+      "@parcel/watcher",
+      "@scarf/scarf",
+      "@tree-sitter-grammars/tree-sitter-yaml",
+      "core-js-pure",
+      "esbuild",
+      "tree-sitter",
+      "tree-sitter-json"
     ]
   }
 }

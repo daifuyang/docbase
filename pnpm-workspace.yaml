@@ -1,0 +1,24 @@
+# Project-local pnpm workspace overrides.
+# Created automatically by pnpm 11; populated to allow required build scripts
+# that the global /home/dfy/pnpm-workspace.yaml disables.
+allowBuilds:
+  '@biomejs/biome': true
+  '@parcel/watcher': true
+  '@scarf/scarf': true
+  '@tree-sitter-grammars/tree-sitter-yaml': true
+  core-js-pure: true
+  esbuild: true
+  tree-sitter: true
+  tree-sitter-json: true
+minimumReleaseAgeExclude:
+  - '@better-auth/api-key@1.6.22'
+ignoreScripts: false
+onlyBuiltDependencies:
+  - '@biomejs/biome'
+  - '@parcel/watcher'
+  - '@scarf/scarf'
+  - '@tree-sitter-grammars/tree-sitter-yaml'
+  - core-js-pure
+  - esbuild
+  - tree-sitter
+  - tree-sitter-json

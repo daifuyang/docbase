@@ -9,7 +9,14 @@ build/
 .output/
 .tanstack/
 .fc-code/
+.fc-code/
 server-build/
+# fc-deploy/ 下的构建产物也忽略（保留 s.yaml / server/ / package.json 模板等）
+fc-deploy/dist/
+fc-deploy/node_modules/
+fc-deploy/db/
+fc-deploy/.env
+fc-deploy/fc.env
 
 # Coverage
 coverage/
