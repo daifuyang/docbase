@@ -1,0 +1,84 @@
+name: 'Database migrations (composite)'
+description: >-
+  在 VPS runner 上通过 ECS 私网跑 drizzle-kit migrate；先做联通 check，再做迁移。
+  这是一个 composite action，不直接发布到 FC，只是给上游 workflow 复用。
+
+inputs:
+  database-url-private:
+    description: 'postgres://... 私网 URL (含 docbase_app 凭证)'
+    required: true
+  redis-url-private:
+    description: 'redis://... 私网 URL (含 docbase_app 凭证)'
+    required: true
+  pg-super-url:
+    description: 'postgres superuser URL，用于 sanity-check（不会写入）'
+    required: false
+  redis-super-url:
+    description: 'redis admin URL，仅用于 ACL verify (不会写入)'
+    required: false
+  run-seed:
+    description: '是否再跑 db seed (默认 false)'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Sanity — psql/redis-cli on ECS
+      shell: bash
+      run: |
+        set -e
+        # 1) pg super 连通 (cron 跑前一步 PG health)
+        if [ -n "${{ inputs.pg-super-url }}" ]; then
+          PGPASSWORD="$(echo '${{ inputs.pg-super-url }}' | sed -E 's#^postgres://[^:]+:([^@]+)@.*#\1#')" \
+            psql "$(echo '${{ inputs.pg-super-url }}' | sed -E 's#postgresql?://#postgresql://#')" \
+            -c 'select 1;' >/dev/null
+        fi
+        # 2) pg app 用户连接
+        PGPASSWORD="$(echo '${{ inputs.database-url-private }}' | sed -E 's#^postgres://[^:]+:([^@]+)@.*#\1#')" \
+          psql "$(echo '${{ inputs.database-url-private }}' | sed -E 's#postgresql?://#postgresql://#')" \
+          -c "\dn+" | head
+
+    - name: Ensure drizzle migrations directory
+      shell: bash
+      run: |
+        if [ ! -d db/migrations ]; then
+          echo "✗ db/migrations/ not found — run 'pnpm db:generate' first" >&2
+          exit 1
+        fi
+        find db/migrations -name '*.sql' | wc -l | awk '{ print "found "$1" migration files" }'
+
+    - name: Run drizzle-kit migrate
+      shell: bash
+      env:
+        DATABASE_URL: ${{ inputs.database-url-private }}
+      run: |
+        pnpm db:migrate
+
+    - name: Redis ACL verification
+      shell: bash
+      run: |
+        set -e
+        REDIS_URL="${{ inputs.redis-url-private }}"
+        if [ -z "$REDIS_URL" ]; then
+          echo "skip — no redis url"
+          exit 0
+        fi
+        # 用 docbase_app 用户登录
+        WHOAMI=$(redis-cli --user docbase_app \
+            --pass "$(echo "$REDIS_URL" | sed -E 's#^redis://[^@/]+@##; s#/.*##')" \
+            --no-auth-warning ACL WHOAMI)
+        echo "ACL WHOAMI = $WHOAMI"
+        if [ "$WHOAMI" != "docbase_app" ]; then
+          echo "✗ WHOAMI mismatch" >&2
+          exit 1
+        fi
+        # 探测越界 key 应该被挡
+        if redis-cli --user docbase_app \
+            --pass "$(echo "$REDIS_URL" | sed -E 's#^redis://[^@/]+@##; s#/.*##')" \
+            --no-auth-warning SET tmp:probe on 2>&1 | grep -qi "no permission\|no key access"; then
+          echo "✓ docbase_app ACL correctly blocks tmp:*"
+        else
+          echo "✗ docbase_app can touch tmp:probe — re-apply ACL" >&2
+          exit 1
+        fi

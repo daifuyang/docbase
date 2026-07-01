@@ -4,6 +4,7 @@ import {
   Outlet,
   Scripts,
   createRootRoute,
+  redirect,
   useRouterState,
 } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
@@ -11,6 +12,7 @@ import { Nav } from '~/components/nav'
 import { Sidebar } from '~/components/sidebar'
 import { queryClient } from '~/router'
 import { getCurrentUser } from '~/server/auth'
+import { getInstallState } from '~/server/install'
 import { getNavigationTree } from '~/server/spaces'
 import { listTags } from '~/server/tags'
 import '~/styles/globals.css'
@@ -25,12 +27,35 @@ export const Route = createRootRoute({
     ],
     links: [{ rel: 'icon', href: '/favicon.ico' }],
   }),
+  beforeLoad: async ({ location }) => {
+    const installState = await getInstallState()
+    const publicPaths = ['/install', '/swagger', '/api/health']
+    if (installState.status !== 'ready' && !publicPaths.includes(location.pathname)) {
+      throw redirect({ to: '/install' })
+    }
+  },
   loader: async () => {
+    const installState = await getInstallState()
+    if (installState.status !== 'ready') {
+      return {
+        installState,
+        me: null,
+        tags: [],
+        spaces: [],
+        expandedKeys: [],
+      }
+    }
+    // getCurrentUser() returns null for anonymous requests (see
+    // getCurrentUserService). Child routes decide whether to redirect
+    // (e.g. index.tsx → /auth/login). Don't throw here — otherwise the
+    // error boundary would intercept before the child route's
+    // beforeLoad redirect can run.
     const me = await getCurrentUser()
     const [tags, navigation] = me
       ? await Promise.all([listTags({ data: { limit: 12 } }), getNavigationTree()])
       : [{ items: [] }, { items: [], expandedKeys: [] }]
     return {
+      installState,
       me,
       tags: tags.items,
       spaces: navigation.items,
@@ -45,12 +70,13 @@ export const Route = createRootRoute({
 function RootComponent() {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const isAuthRoute = pathname.startsWith('/auth/')
+  const isInstallRoute = pathname === '/install'
   const data = Route.useLoaderData()
 
   return (
     <RootDocument>
       <QueryClientProvider client={queryClient}>
-        {isAuthRoute ? (
+        {isAuthRoute || isInstallRoute ? (
           <Outlet />
         ) : (
           <div className="min-h-screen bg-background">

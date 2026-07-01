@@ -8,6 +8,8 @@ build/
 .vinxi/
 .output/
 .tanstack/
+.fc-code/
+server-build/
 
 # Coverage
 coverage/
@@ -19,6 +21,9 @@ coverage/
 .env.development.local
 .env.production.local
 !.env.example
+config/docbase.config.json
+config/install.lock
+config/installing.lock
 
 # Logs
 *.log

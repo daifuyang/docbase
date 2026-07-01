@@ -12,7 +12,12 @@
   "scripts": {
     "dev": "vite dev --host 0.0.0.0",
     "build": "vite build",
-    "start": "node .output/server/index.mjs",
+    "start": "node dist/server/server.js",
+    "build:fc": "node scripts/build-fc.mjs",
+    "deploy": "pnpm build && pnpm build:fc && npx -p @serverless-devs/s s deploy -f s.yaml -y",
+    "deploy:dry": "npx -p @serverless-devs/s s plan -f s.yaml",
+    "deploy:info": "npx -p @serverless-devs/s s info -f s.yaml",
+    "deploy:rollback": "npx -p @serverless-devs/s s rollback -f s.yaml",
     "cli": "tsx src/cli/index.ts",
     "typecheck": "tsc --noEmit",
     "lint": "biome check --write .",
@@ -65,6 +70,8 @@
     "react-hook-form": "^7.53.0",
     "sanitize-html": "^2.13.1",
     "tailwind-merge": "^2.5.4",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-react": "^5.18.0",
     "zod": "^4.0.0"
   },
   "devDependencies": {

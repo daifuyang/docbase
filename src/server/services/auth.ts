@@ -8,7 +8,13 @@ import type { PublicUser } from '~/shared/types'
 import type { SignInInput, SignUpInput } from '~/shared/validation/user'
 import { type ServiceContext, requireAdmin } from './context'
 
-export async function getCurrentUserService(ctx: ServiceContext): Promise<PublicUser | null> {
+export async function getCurrentUserService(
+  ctx: ServiceContext | null,
+): Promise<PublicUser | null> {
+  // Anonymous (or stale credentials): return null — never throw. The
+  // root loader and `beforeLoad` guards use this to decide whether to
+  // redirect to /auth/login.
+  if (!ctx) return null
   const u = await db.query.user.findFirst({ where: eq(schema.user.id, ctx.userId) })
   if (!u) return null
   return {

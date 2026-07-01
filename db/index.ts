@@ -1,4 +1,4 @@
-import 'dotenv/config'
+import '../src/lib/runtime-config.server'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 import * as schema from './schema'

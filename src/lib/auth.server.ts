@@ -4,11 +4,10 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { tanstackStartCookies } from 'better-auth/tanstack-start'
 import * as schema from '~/../db/schema'
 import { db } from './db.server'
+import './runtime-config.server'
 
-const secret = process.env.BETTER_AUTH_SECRET
-if (!secret || secret.length < 32) {
-  throw new Error('BETTER_AUTH_SECRET must be set and >=32 chars')
-}
+const installModeSecret = 'docbase-install-mode-secret-placeholder-000000'
+const secret = process.env.BETTER_AUTH_SECRET ?? installModeSecret
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {

@@ -1,4 +1,4 @@
-import 'dotenv/config'
+import './src/lib/runtime-config.server'
 import { defineConfig } from 'drizzle-kit'
 
 export default defineConfig({

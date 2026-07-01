@@ -5,11 +5,14 @@ import { DocumentCard } from '~/components/document-card'
 import { Badge } from '~/components/ui/badge'
 import { getCurrentUser } from '~/server/auth'
 import { listDocuments, listMyDocuments } from '~/server/documents'
+import { getInstallState } from '~/server/install'
 import { listSpaceTree } from '~/server/spaces'
 import { listTags } from '~/server/tags'
 
 export const Route = createFileRoute('/')({
   beforeLoad: async () => {
+    const installState = await getInstallState()
+    if (installState.status !== 'ready') throw redirect({ to: '/install' })
     const me = await getCurrentUser()
     if (!me) throw redirect({ to: '/auth/login' })
     return { me }

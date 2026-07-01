@@ -4,7 +4,7 @@
 import type { Command } from 'commander'
 import { Errors } from '~/lib/errors'
 import { revokeApiKeyService } from '~/server/services/auth'
-import { contextFromHeaders } from '~/server/services/context'
+import { contextFromHeaders, requireUserContext } from '~/server/services/context'
 import { ApiClient } from '../api-client'
 import { clearCredentials, credentialsPath, loadCredentials, saveCredentials } from '../credentials'
 import { formatOutput, printInfo } from '../output'
@@ -73,7 +73,7 @@ export function registerAuthCommands(program: Command): void {
       try {
         const headers = new Headers()
         headers.set('x-api-key', creds.apiKey)
-        const ctx = await contextFromHeaders(headers)
+        const ctx = requireUserContext(await contextFromHeaders(headers))
         await revokeApiKeyService(ctx, { keyId: creds.apiKeyId })
       } catch (err) {
         // best effort — even if revocation fails, clear local file

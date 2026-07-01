@@ -9,8 +9,10 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SwaggerRouteImport } from './routes/swagger'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
+import { Route as InstallRouteImport } from './routes/install'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TagsSlugRouteImport } from './routes/tags.$slug'
@@ -20,7 +22,15 @@ import { Route as DocumentsSlugRouteImport } from './routes/documents.$slug'
 import { Route as AuthLoginRouteImport } from './routes/auth.login'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as DocumentsSlugEditRouteImport } from './routes/documents.$slug.edit'
+import { Route as ApiInstallStateRouteImport } from './routes/api/install.state'
+import { Route as ApiInstallRunRouteImport } from './routes/api/install.run'
+import { Route as ApiInstallConfigRouteImport } from './routes/api/install.config'
 
+const SwaggerRoute = SwaggerRouteImport.update({
+  id: '/swagger',
+  path: '/swagger',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
@@ -29,6 +39,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
   id: '/robots.txt',
   path: '/robots.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InstallRoute = InstallRouteImport.update({
+  id: '/install',
+  path: '/install',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -76,45 +91,75 @@ const DocumentsSlugEditRoute = DocumentsSlugEditRouteImport.update({
   path: '/edit',
   getParentRoute: () => DocumentsSlugRoute,
 } as any)
+const ApiInstallStateRoute = ApiInstallStateRouteImport.update({
+  id: '/api/install/state',
+  path: '/api/install/state',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiInstallRunRoute = ApiInstallRunRouteImport.update({
+  id: '/api/install/run',
+  path: '/api/install/run',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiInstallConfigRoute = ApiInstallConfigRouteImport.update({
+  id: '/api/install/config',
+  path: '/api/install/config',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/install': typeof InstallRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/swagger': typeof SwaggerRoute
   '/api/health': typeof ApiHealthRoute
   '/auth/login': typeof AuthLoginRoute
   '/documents/$slug': typeof DocumentsSlugRouteWithChildren
   '/documents/new': typeof DocumentsNewRoute
   '/spaces/$slug': typeof SpacesSlugRoute
   '/tags/$slug': typeof TagsSlugRoute
+  '/api/install/config': typeof ApiInstallConfigRoute
+  '/api/install/run': typeof ApiInstallRunRoute
+  '/api/install/state': typeof ApiInstallStateRoute
   '/documents/$slug/edit': typeof DocumentsSlugEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/install': typeof InstallRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/swagger': typeof SwaggerRoute
   '/api/health': typeof ApiHealthRoute
   '/auth/login': typeof AuthLoginRoute
   '/documents/$slug': typeof DocumentsSlugRouteWithChildren
   '/documents/new': typeof DocumentsNewRoute
   '/spaces/$slug': typeof SpacesSlugRoute
   '/tags/$slug': typeof TagsSlugRoute
+  '/api/install/config': typeof ApiInstallConfigRoute
+  '/api/install/run': typeof ApiInstallRunRoute
+  '/api/install/state': typeof ApiInstallStateRoute
   '/documents/$slug/edit': typeof DocumentsSlugEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/install': typeof InstallRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/swagger': typeof SwaggerRoute
   '/api/health': typeof ApiHealthRoute
   '/auth/login': typeof AuthLoginRoute
   '/documents/$slug': typeof DocumentsSlugRouteWithChildren
   '/documents/new': typeof DocumentsNewRoute
   '/spaces/$slug': typeof SpacesSlugRoute
   '/tags/$slug': typeof TagsSlugRoute
+  '/api/install/config': typeof ApiInstallConfigRoute
+  '/api/install/run': typeof ApiInstallRunRoute
+  '/api/install/state': typeof ApiInstallStateRoute
   '/documents/$slug/edit': typeof DocumentsSlugEditRoute
 }
 export interface FileRouteTypes {
@@ -122,58 +167,85 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/install'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/swagger'
     | '/api/health'
     | '/auth/login'
     | '/documents/$slug'
     | '/documents/new'
     | '/spaces/$slug'
     | '/tags/$slug'
+    | '/api/install/config'
+    | '/api/install/run'
+    | '/api/install/state'
     | '/documents/$slug/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/admin'
+    | '/install'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/swagger'
     | '/api/health'
     | '/auth/login'
     | '/documents/$slug'
     | '/documents/new'
     | '/spaces/$slug'
     | '/tags/$slug'
+    | '/api/install/config'
+    | '/api/install/run'
+    | '/api/install/state'
     | '/documents/$slug/edit'
   id:
     | '__root__'
     | '/'
     | '/admin'
+    | '/install'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/swagger'
     | '/api/health'
     | '/auth/login'
     | '/documents/$slug'
     | '/documents/new'
     | '/spaces/$slug'
     | '/tags/$slug'
+    | '/api/install/config'
+    | '/api/install/run'
+    | '/api/install/state'
     | '/documents/$slug/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  InstallRoute: typeof InstallRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  SwaggerRoute: typeof SwaggerRoute
   ApiHealthRoute: typeof ApiHealthRoute
   AuthLoginRoute: typeof AuthLoginRoute
   DocumentsSlugRoute: typeof DocumentsSlugRouteWithChildren
   DocumentsNewRoute: typeof DocumentsNewRoute
   SpacesSlugRoute: typeof SpacesSlugRoute
   TagsSlugRoute: typeof TagsSlugRoute
+  ApiInstallConfigRoute: typeof ApiInstallConfigRoute
+  ApiInstallRunRoute: typeof ApiInstallRunRoute
+  ApiInstallStateRoute: typeof ApiInstallStateRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/swagger': {
+      id: '/swagger'
+      path: '/swagger'
+      fullPath: '/swagger'
+      preLoaderRoute: typeof SwaggerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sitemap.xml': {
       id: '/sitemap.xml'
       path: '/sitemap.xml'
@@ -186,6 +258,13 @@ declare module '@tanstack/react-router' {
       path: '/robots.txt'
       fullPath: '/robots.txt'
       preLoaderRoute: typeof RobotsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/install': {
+      id: '/install'
+      path: '/install'
+      fullPath: '/install'
+      preLoaderRoute: typeof InstallRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -251,6 +330,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocumentsSlugEditRouteImport
       parentRoute: typeof DocumentsSlugRoute
     }
+    '/api/install/state': {
+      id: '/api/install/state'
+      path: '/api/install/state'
+      fullPath: '/api/install/state'
+      preLoaderRoute: typeof ApiInstallStateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/install/run': {
+      id: '/api/install/run'
+      path: '/api/install/run'
+      fullPath: '/api/install/run'
+      preLoaderRoute: typeof ApiInstallRunRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/install/config': {
+      id: '/api/install/config'
+      path: '/api/install/config'
+      fullPath: '/api/install/config'
+      preLoaderRoute: typeof ApiInstallConfigRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -269,14 +369,19 @@ const DocumentsSlugRouteWithChildren = DocumentsSlugRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  InstallRoute: InstallRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  SwaggerRoute: SwaggerRoute,
   ApiHealthRoute: ApiHealthRoute,
   AuthLoginRoute: AuthLoginRoute,
   DocumentsSlugRoute: DocumentsSlugRouteWithChildren,
   DocumentsNewRoute: DocumentsNewRoute,
   SpacesSlugRoute: SpacesSlugRoute,
   TagsSlugRoute: TagsSlugRoute,
+  ApiInstallConfigRoute: ApiInstallConfigRoute,
+  ApiInstallRunRoute: ApiInstallRunRoute,
+  ApiInstallStateRoute: ApiInstallStateRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -3,7 +3,7 @@ import * as schema from '~/../db/schema'
 import { db } from '~/lib/db.server'
 import { Errors } from '~/lib/errors'
 import { rateLimit } from '~/lib/rate-limit.server'
-import { redis } from '~/lib/redis.server'
+import { redis, withPrefix } from '~/lib/redis.server'
 import { slugify, withSuffix } from '~/lib/slug.server'
 import { renderTiptapToHtml } from '~/lib/tiptap.server'
 import type { DocumentDetail, DocumentSummary, PaginatedResponse } from '~/shared/types'
@@ -86,7 +86,7 @@ export async function createDocumentService(
   if (!documentRow) throw Errors.internal('文档创建失败')
 
   await replaceDocumentTags(documentRow.id, input.tags)
-  await redis.del('documents:list:*').catch(() => {})
+  await redis.del(withPrefix('cache:documents:list:*')).catch(() => {})
 
   const detail = await readDocumentDetailBySlugService(ctx, { slug: finalSlug })
   if (!detail) throw Errors.internal('文档创建成功但读取失败')
@@ -118,7 +118,7 @@ export async function updateDocumentService(
     .where(eq(schema.document.id, input.id))
 
   if (input.tags) await replaceDocumentTags(input.id, input.tags)
-  await redis.del('documents:list:*').catch(() => {})
+  await redis.del(withPrefix('cache:documents:list:*')).catch(() => {})
 
   const detail = await readDocumentDetailBySlugService(ctx, { slug: existing.slug })
   if (!detail) throw Errors.internal('更新后读取失败')
@@ -133,7 +133,7 @@ export async function deleteDocumentService(
   if (!existing) throw Errors.notFound('文档不存在')
   if (existing.authorId !== ctx.userId) throw Errors.forbidden('只能删除自己创建的文档')
   await db.delete(schema.document).where(eq(schema.document.id, input.id))
-  await redis.del('documents:list:*').catch(() => {})
+  await redis.del(withPrefix('cache:documents:list:*')).catch(() => {})
   return { ok: true }
 }
 

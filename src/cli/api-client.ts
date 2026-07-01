@@ -11,7 +11,11 @@ import { createApiKeyService, getCurrentUserService, signInService } from '~/ser
  * Auth failures (no credentials file or invalid key) bubble up as
  * ServerError(401) so the CLI's `errors.ts` can map them to exit code 4.
  */
-import { type ServiceContext, contextFromHeaders } from '~/server/services/context'
+import {
+  type ServiceContext,
+  contextFromHeaders,
+  requireUserContext,
+} from '~/server/services/context'
 import {
   createDocumentService,
   deleteDocumentService,
@@ -35,7 +39,7 @@ export class ApiClient {
       }
       const headers = new Headers()
       headers.set('x-api-key', creds.apiKey)
-      return contextFromHeaders(headers)
+      return requireUserContext(await contextFromHeaders(headers))
     })()
     return this.ctxPromise
   }

@@ -1,0 +1,101 @@
+edition: 3.0.0
+name: docbase-prod
+access: default
+
+# =============================================================================
+# DocBase — Serverless Devs 多资源编排
+# =============================================================================
+# 两个 resource:
+#   - docbase-web:       FC 函数 (cn-shanghai, custom.debian12, 通过 VPC 连 ECS PG/Redis)
+#   - docbase-domain:    FC 自定义域名 (HTTPS, certName 来自 CAS)
+#
+# env 注入:
+#   在 VPS runner 上从 env-config 拉凭证,写到 /tmp/.env.fc, deploy 时
+#   `s deploy -f s.yaml --env-file /tmp/.env.fc` 让所有 ${env(...)} 拿到值
+#
+# 关键点 (从 yishan-flow + codecloaud 范式总结):
+#   - runtime: custom.debian12  (FC 自带 node22, 强制 PATH 含 /var/fc/lang/nodejs22/bin)
+#   - command: ./bootstrap      (执行 fc-server.mjs, 监听 PORT=9000)
+#   - port: 9000
+#   - code: ./.fc-code          (build:fc 输出物)
+# =============================================================================
+
+vars:
+  region: cn-shanghai
+  functionName: docbase-web
+  serviceName: docbase-prod
+  domain: docbase.zerocmf.com
+
+resources:
+  docbase-web:
+    component: fc3
+    props:
+      region: ${vars.region}
+      serviceName: ${vars.serviceName}
+      functionName: ${vars.functionName}
+      description: DocBase enterprise knowledge base (TanStack Start on FC)
+      runtime: custom.debian12
+      code: ./.fc-code
+      handler: not-used           # custom runtime 时 FC 不使用 handler
+      timeout: 60
+      memorySize: 1024
+      cpu: 1
+      diskSize: 512
+      instanceConcurrency: 100
+      internetAccess: true        # 调试 / WebFetch 出口; 私网访问走 VPC
+      customRuntimeConfig:
+        command:
+          - /code/bootstrap
+        port: 9000
+        healthCheckConfig: {}
+      logConfig:
+        project: docbase-fc-log
+        logstore: fc-log
+        enableRequestMetrics: false
+        enableInstanceMetrics: false
+      vpcConfig:                  # ECS PG + Redis 在同一 VPC 私网内
+        vpcId: ${env(VPC_ID)}
+        vSwitchIds:
+          - ${env(VSWITCH_ID)}
+        securityGroupId: ${env(SECURITY_GROUP_ID)}
+      triggers:
+        - triggerName: http-trigger
+          triggerType: http
+          qualifier: LATEST
+          triggerConfig:
+            authType: anonymous
+            methods:
+              - GET
+              - POST
+              - PUT
+              - PATCH
+              - DELETE
+              - OPTIONS
+              - HEAD
+      environmentVariables:
+        NODE_ENV: production
+        PORT: '9000'
+        PATH: /var/fc/lang/nodejs22/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/sbin:/bin
+        DATABASE_URL: postgresql://docbase_app:Dbc2025!Xk9@172.23.212.135:5432/docbase
+        REDIS_URL: redis://:Codecloud2025.@139.196.89.64:6379
+        BETTER_AUTH_SECRET: ${env(BETTER_AUTH_SECRET)}
+        BETTER_AUTH_URL:    https://${vars.domain}
+        PUBLIC_APP_URL:     https://${vars.domain}
+        DOCBASE_INSTALLED:  'true'
+        LOG_LEVEL:          info
+
+  docbase-domain:
+    component: fc3-domain
+    props:
+      region: ${vars.region}
+      serviceName: ${vars.serviceName}
+      functionName: ${vars.functionName}
+      domainName: ${vars.domain}
+      protocol: HTTPS
+      certConfig:
+        certId: ${env(CAS_CERT_ID)}
+      routeConfig:
+        routes:
+          - functionName: ${vars.functionName}
+            path: /*
+            qualifier: LATEST

@@ -10,6 +10,17 @@ import { Errors } from '~/lib/errors'
  * Every service function takes a `ServiceContext` as its first argument
  * instead of calling `getRequestHeaders()` directly. Both the Web's
  * `createServerFn` shims and the CLI's command handlers build one.
+ *
+ * Semantics:
+ *   - `userId: string`     — always a valid user id (callers are responsible
+ *                            for either authenticating or accepting the null
+ *                            from `contextFromHeaders`).
+ *   - `authKind: 'session' | 'apiKey' | 'cli'` — how the caller authenticated.
+ *   - `headers`            — original request headers (for IP / audit logging).
+ *
+ * To distinguish "no credentials" from "wrong credentials", use the nullable
+ * builder (`contextFromHeaders`) and either bail early or call
+ * `requireUserContext`.
  */
 export type ServiceContext = {
   userId: string
@@ -20,11 +31,15 @@ export type ServiceContext = {
 }
 
 /**
- * Build a ServiceContext from request headers. Tries session cookie
- * first (the Web's normal path); falls back to the `x-api-key` header
- * (the CLI's path, validated by the @better-auth/api-key plugin).
+ * Resolve credentials from request headers. Returns `null` for anonymous
+ * requests — callers that need an authenticated user must call
+ * `requireUserContext` (or short-circuit) themselves.
+ *
+ * Tries session cookie first (the Web's normal path); falls back to the
+ * `x-api-key` header (the CLI's path, validated by the @better-auth/api-key
+ * plugin).
  */
-export async function contextFromHeaders(headers: Headers): Promise<ServiceContext> {
+export async function contextFromHeaders(headers: Headers): Promise<ServiceContext | null> {
   const session = await auth.api.getSession({ headers })
   if (session?.user?.id) {
     return { userId: session.user.id, headers, authKind: 'session' }
@@ -42,7 +57,16 @@ export async function contextFromHeaders(headers: Headers): Promise<ServiceConte
     }
   }
 
-  throw Errors.unauthenticated()
+  return null
+}
+
+/**
+ * Throw UNAUTHENTICATED when ctx is null. Use this at the top of any
+ * service function that requires a logged-in user.
+ */
+export function requireUserContext(ctx: ServiceContext | null): ServiceContext {
+  if (!ctx) throw Errors.unauthenticated()
+  return ctx
 }
 
 /**

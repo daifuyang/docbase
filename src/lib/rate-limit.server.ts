@@ -1,5 +1,5 @@
 import { logger } from './logger.server'
-import { ensureRedis, redis } from './redis.server'
+import { ensureRedis, redis, withPrefix } from './redis.server'
 
 type RateLimitResult = {
   allowed: boolean
@@ -22,7 +22,7 @@ export async function rateLimit(
   windowSec: number,
 ): Promise<RateLimitResult> {
   await ensureRedis()
-  const fullKey = `rl:${scope}:${key}:${Math.floor(Date.now() / 1000 / windowSec)}`
+  const fullKey = withPrefix(`rl:${scope}:${key}:${Math.floor(Date.now() / 1000 / windowSec)}`)
   try {
     const count = await redis.incr(fullKey)
     if (count === 1) {

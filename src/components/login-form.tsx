@@ -41,12 +41,12 @@ export function LoginForm() {
     startTransition(async () => {
       try {
         await signInFn({ data: values })
-        navigate({ to: '/' })
-      } catch (e: unknown) {
-        const code = getErrorField(e, 'code')
+        window.location.href = '/'
+      } catch (err: unknown) {
+        const code = getErrorField(err, 'code')
         if (code === 'INVALID_CREDENTIALS') setServerError('账号或密码错误')
         else if (code === 'RATE_LIMITED') setServerError('操作过于频繁，请稍后再试')
-        else setServerError(getErrorField(e, 'message') ?? '登录失败')
+        else setServerError(getErrorField(err, 'message') ?? '登录失败')
       }
     })
   }

@@ -35,18 +35,19 @@ ENV PORT=3000
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && adduser -S docbase -u 1001
 
-# Copy built artifacts
-COPY --from=builder --chown=docbase:nodejs /app/build ./build
+# Copy built artifacts (note: TanStack Start writes to dist/, not build/)
+COPY --from=builder --chown=docbase:nodejs /app/dist ./dist
 COPY --from=builder --chown=docbase:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=docbase:nodejs /app/package.json ./package.json
 COPY --from=builder --chown=docbase:nodejs /app/db ./db
 
-# Install wget for healthcheck
-RUN apk add --no-cache wget
+# Install wget for healthcheck + postgresql client for migrations
+RUN apk add --no-cache wget postgresql16-client
 
 USER docbase
 
 EXPOSE 3000
 
 # Run migrations then start app
-CMD ["sh", "-c", "node -e \"require('drizzle-orm/postgres-js/migrator').default(require('postgres')('${DATABASE_URL}'), { migrationsFolder: './db/migrations' }).then(() => console.log('migrated')).catch(e => { console.error(e); process.exit(1); })\" && node .output/server/index.mjs"]
+# Entry: dist/server/server.js (FC-compatible Web Fetch handler)
+CMD ["sh", "-c", "node dist/server/server.js"]

@@ -1,9 +1,12 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { LoginForm } from '~/components/login-form'
 import { getCurrentUser } from '~/server/auth'
+import { getInstallState } from '~/server/install'
 
 export const Route = createFileRoute('/auth/login')({
   beforeLoad: async () => {
+    const installState = await getInstallState()
+    if (installState.status !== 'ready') throw redirect({ to: '/install' })
     const me = await getCurrentUser()
     if (me) throw redirect({ to: '/' })
   },
