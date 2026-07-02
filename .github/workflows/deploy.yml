@@ -20,10 +20,6 @@ on:
     branches: [deploy]
   workflow_dispatch:
     inputs:
-      skip_migrate:
-        description: Skip DB migrations (migrations are done manually)
-        required: false
-        default: 'true'
       skip_admin_ensure:
         description: Skip admin account ensure
         required: false
@@ -103,7 +99,6 @@ jobs:
         env:
           DOCBASE_FC_ENV_FILE: ${{ runner.temp }}/docbase-fc.env
           DOCBASE_RUN_PREFLIGHT: '0'
-          DOCBASE_RUN_MIGRATIONS: '0'
           DOCBASE_RUN_ADMIN_ENSURE: ${{ github.event.inputs.skip_admin_ensure != 'true' && '1' || '0' }}
         run: |
           set -euo pipefail
