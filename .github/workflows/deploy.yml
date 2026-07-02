@@ -53,12 +53,12 @@ jobs:
           npm install -g @serverless-devs/s pnpm
           s --version
           pnpm --version
-          # 写明文 access.yaml（s 可以直接读）
-          mkdir -p ~/.s
-          echo 'default:' > ~/.s/access.yaml
-          printf '  AccessKeyID: "%s"\n' "$ALIYUN_AK" >> ~/.s/access.yaml
-          printf '  AccessKeySecret: "%s"\n' "$ALIYUN_SK" >> ~/.s/access.yaml
-          cat ~/.s/access.yaml
+          # 用 s config add 自动配置凭证（含 AccountID 推理）
+          s config add \
+            --AccessKeyID "$ALIYUN_AK" \
+            --AccessKeySecret "$ALIYUN_SK" \
+            --access default -f
+          s config get -a default
 
       # ---------- (2) Stage FC env 文件 ----------
       - name: Stage FC env file
