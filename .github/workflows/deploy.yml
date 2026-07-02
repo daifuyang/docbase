@@ -56,7 +56,13 @@ jobs:
           pnpm --version
           # 写明文 access.yaml（s 可以直接读）
           mkdir -p ~/.s
-          printf 'default:\n  AccessKeyID: %s\n  AccessKeySecret: %s\n' "$ALIYUN_AK" "$ALIYUN_SK" > ~/.s/access.yaml
+          cat > ~/.s/access.yaml << 'EOF'
+default:
+  AccessKeyID: ALIYUN_AK
+  AccessKeySecret: ALIYUN_SK
+EOF
+          sed -i "s/ALIYUN_AK/$ALIYUN_AK/" ~/.s/access.yaml
+          sed -i "s/ALIYUN_SK/$ALIYUN_SK/" ~/.s/access.yaml
           s config get -a default
 
       # ---------- (2) Stage FC env 文件 ----------
