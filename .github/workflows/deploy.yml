@@ -54,7 +54,7 @@ jobs:
           npm install -g @serverless-devs/s pnpm
           s --version
           pnpm --version
-          # 配置 s 凭证（s.yaml 用 access: default）
+          # 配置 s 凭证（s.yaml 用 access: default，对应 enterprise AK/SK）
           s config delete -a default --silent 2>/dev/null || true
           s config add --AccessKeyID "$ALIYUN_AK" --AccessKeySecret "$ALIYUN_SK" --AccountID 165000000000000 --silent -a default
 
