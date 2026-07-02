@@ -47,14 +47,16 @@ jobs:
       # ---------- (1) 安装工具 + 配置凭证 ----------
       - name: Install tools + configure s credentials
         env:
-          S_ACCESS_YAML: ${{ secrets.S_ACCESS_YAML }}
+          ALIYUN_AK: ${{ secrets.ALIYUN_AK }}
+          ALIYUN_SK: ${{ secrets.ALIYUN_SK }}
         run: |
           set -e
           npm install -g @serverless-devs/s pnpm
           s --version
           pnpm --version
+          # 写明文 access.yaml（s 可以直接读）
           mkdir -p ~/.s
-          echo "$S_ACCESS_YAML" > ~/.s/access.yaml
+          printf 'default:\n  AccessKeyID: %s\n  AccessKeySecret: %s\n' "$ALIYUN_AK" "$ALIYUN_SK" > ~/.s/access.yaml
           s config get -a default
 
       # ---------- (2) Stage FC env 文件 ----------
