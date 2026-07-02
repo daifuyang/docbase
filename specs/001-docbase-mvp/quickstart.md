@@ -4,8 +4,8 @@
 
 ```bash
 cp .env.example .env
+# ensure PostgreSQL 16 and Redis 7 are already running locally
 pnpm install
-docker compose up -d postgres redis
 pnpm db:migrate
 pnpm db:seed
 pnpm dev

@@ -15,7 +15,7 @@ DocBase 是内部企业知识库。MVP 使用 TanStack Start + React + TypeScrip
 - **Editor**: TipTap JSON, server-side HTML rendering, sanitize-html
 - **UI**: shadcn/ui, Radix primitives, Tailwind v4
 - **Testing**: Vitest, Playwright
-- **Deploy**: Docker Compose + Caddy
+- **Deploy**: Aliyun FC 3.0
 
 ## Constitution Check
 
@@ -24,7 +24,7 @@ DocBase 是内部企业知识库。MVP 使用 TanStack Start + React + TypeScrip
 | Modular Boundaries & Library-First | Pass: auth, documents, spaces, tags use separated server modules and shared schemas. |
 | Test-First Delivery | Pass: validation and route behavior tests cover the replanned MVP; broader E2E can expand from the new user stories. |
 | Contract & Journey Coverage | Pass: server function contracts define auth, spaces, documents, search and tags. |
-| Production Observability & Operability | Pass: existing logger, health route, Docker and Redis patterns remain in place. |
+| Production Observability & Operability | Pass: existing logger, health route, FC deployment workflow and Redis patterns remain in place. |
 | Spec-First Change Control | Pass: this plan replaces the old community spec chain. |
 | Product Experience & Domain Fit | Pass: UI is Chinese enterprise knowledge-base oriented, with persistent sidebar and real search. |
 | Security, Privacy & Data Integrity | Pass: content is login-gated, role checks protect governance APIs, TipTap HTML is sanitized. |

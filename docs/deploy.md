@@ -82,17 +82,17 @@ exec node .output/server/index.mjs
 
 workflow 侧通过 GitHub Secrets 注入原始凭证，并映射为 `deploy-fc.sh` 需要的标准变量：
 
-| 标准变量 | 来源示例 |
+| 标准变量 | 当前 workflow 来源 |
 | --- | --- |
-| `VPC_ID` | `FC_VPC_ID` |
-| `VSWITCH_ID` | `FC_VSW_ID` |
-| `SECURITY_GROUP_ID` | `FC_SG_ID` |
+| `VPC_ID` | `VPC_ID` |
+| `VSWITCH_ID` | `VSWITCH_ID` |
+| `SECURITY_GROUP_ID` | `SECURITY_GROUP_ID` |
 | `DATABASE_URL` | `APP_DB_URL` |
 | `REDIS_URL` | `REDIS_APP_URL` |
 | `BETTER_AUTH_SECRET` | `BETTER_AUTH_SECRET` |
 | `BETTER_AUTH_URL` | `https://docbase.zerocmf.com` |
 | `PUBLIC_APP_URL` | `https://docbase.zerocmf.com` |
-| `BETTER_AUTH_TRUSTED_ORIGINS` | `https://docbase.zerocmf.com` |
+| `BETTER_AUTH_TRUSTED_ORIGINS` | workflow 拼接为 `https://docbase.zerocmf.com,https://cn-shanghai.fcapp.run` |
 
 固定运行时变量：
 
@@ -141,13 +141,14 @@ DOCBASE_SKIP_BUILD=1 pnpm deploy
 `.github/workflows/deploy.yml` 触发：
 
 - push 到 `deploy` 分支
+- `workflow_dispatch`
 
 流程：
 
 1. checkout `deploy`。
 2. 安装并校验 `pnpm`、`@serverless-devs/s`、`aliyun-cli`。
 3. 生成 `fc-deploy/prod.env`。
-4. `scripts/deploy-fc.sh apply`。
+4. `scripts/deploy-fc.sh apply`，内部完成 build、deploy 和 smoke。
 5. `/api/health` 冒烟。
 
 ## 回滚
