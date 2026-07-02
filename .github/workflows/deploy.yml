@@ -55,7 +55,7 @@ jobs:
           s --version
           pnpm --version
           mkdir -p ~/.s
-          printf '%s\n' 'default:' "  AccessKeyID: $ALIYUN_AK" "  AccessKeySecret: $ALIYUN_SK" "  AccountID: $ALIYUN_ACCOUNT_ID" > ~/.s/access.yaml
+          printf 'default:\n  AccessKeyID: "%s"\n  AccessKeySecret: "%s"\n  AccountID: "%s"\n' "$ALIYUN_AK" "$ALIYUN_SK" "$ALIYUN_ACCOUNT_ID" > ~/.s/access.yaml
           cat ~/.s/access.yaml
 
       # ---------- (2) Stage FC env 文件 ----------
