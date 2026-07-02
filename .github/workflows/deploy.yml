@@ -107,6 +107,8 @@ jobs:
           DOCBASE_RUN_PREFLIGHT: '0'
         run: |
           set -euo pipefail
+          echo "=== fc-deploy/prod.env (redacted) ==="
+          sed -E 's#(SECRET|PASSWORD|URL|TOKEN|KEY)=(.+)#\1=***REDACTED***#g' fc-deploy/prod.env
           bash scripts/deploy-fc.sh apply
 
       # ---------- (4) 通知 ----------
