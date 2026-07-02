@@ -1,36 +1,24 @@
 name: Deploy (CD)
 
 # =============================================================================
-# 这个 workflow 只在 `deploy` 分支上跑，runner 是内网 VPS 自托管。
-# 触发：push to deploy / workflow_dispatch / schedule (证书续签)
+# DocBase 生产发布到阿里云 FC 3.0。
 #
-# 凭证加载顺序：
-#   (1) actions/checkout
-#   (2) ./scripts/env-config-load.sh     从 VPS 本地 env-config 写到 $GITHUB_ENV
-#   (3) ./scripts/pre-deploy-checks.sh  做 psql/redis-cli/aliyun 通联通检
-#   (4) ./scripts/run-migrate.sh        通过私网跑 drizzle-kit migrate
-#   (5) pnpm build + pnpm build:fc      组装 server-build/
-#   (6) npx s deploy -f s.yaml          发到 FC cn-shanghai + DNS + CAS
-#   (7) smoke test  https://docbase.zerocmf.com/api/health
+# 与本地手动发布完全一致：
+#   cd <repo> && pnpm build:fc:local
+#   cd fc-deploy && set -a && source prod.env && set +a && npx s deploy -y
+# 这里用 `scripts/deploy-fc.sh apply` 把整条链封装到一步：
+#   load_env → build → s deploy → smoke。
+#
+# 触发：push to deploy / workflow_dispatch（手动）
+# Runner：GitHub 托管 ubuntu-latest
+# 凭证：GitHub Secrets 直接注入（ALIYUN_AK/SK 等）
+# 证书：证书续签由 cert-renew.yml 单独每天检查处理
 # =============================================================================
 
 on:
   push:
     branches: [deploy]
   workflow_dispatch:
-    inputs:
-      skip_migrate:
-        description: Skip migrations (only FC re-deploy)
-        required: false
-        default: 'false'
-      skip_cert_renew:
-        description: Skip cert renewal
-        required: false
-        default: 'false'
-  schedule:
-    # 每周日 04:00 (Asia/Shanghai) — 触发证书续签 & 增量发布
-    # cron 表达式是 UTC；Shanghai = UTC+8
-    - cron: '0 20 * * 0'
 
 concurrency:
   group: deploy-docbase
@@ -39,8 +27,8 @@ concurrency:
 jobs:
   deploy:
     name: deploy → FC cn-shanghai
-    runs-on: [self-hosted, fc-deploy, docbase]   # 只在内网 VPS runner 上跑
-    if: github.ref == 'refs/heads/deploy' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/deploy' || github.event_name == 'workflow_dispatch'
     timeout-minutes: 30
 
     env:
@@ -56,94 +44,74 @@ jobs:
           fetch-depth: 1
           ref: deploy
 
-      # ---------- (1) 工具自检 ----------
-      - name: Verify runner toolchain
+      # ---------- (1) 安装工具 + 配置凭证 ----------
+      - name: Install tools + configure s credentials
+        env:
+          ALIYUN_AK: ${{ secrets.ALIYUN_AK }}
+          ALIYUN_SK: ${{ secrets.ALIYUN_SK }}
+          ALIYUN_ACCOUNT_ID: ${{ secrets.ALIYUN_ACCOUNT_ID }}
         run: |
           set -e
-          for tool in pnpm node psql redis-cli aliyun s certbot; do
-            if ! command -v "$tool" >/dev/null 2>&1; then
-              echo "✗ MISSING: $tool" >&2
-              exit 1
-            fi
-            echo "✓ $tool -> $(command -v $tool)"
-          done
+          npm install -g @serverless-devs/s pnpm
+          s --version
+          pnpm --version
+          mkdir -p ~/.s
+          printf 'default:\n  AccessKeyID: "%s"\n  AccessKeySecret: "%s"\n  AccountID: "%s"\n' "$ALIYUN_AK" "$ALIYUN_SK" "$ALIYUN_ACCOUNT_ID" > ~/.s/access.yaml
+          echo "=== access.yaml 内容 ==="
+          cat ~/.s/access.yaml
+          echo "=== s config get ==="
+          s config get -a default
+          echo "=== env vars (脱敏) ==="
+          echo "ALIYUN_AK=${ALIYUN_AK:0:4}***"
+          echo "ALIYUN_SK=${ALIYUN_SK:0:4}***"
+          echo "ALIYUN_ACCOUNT_ID=${ALIYUN_ACCOUNT_ID:0:4}***"
+          echo "=== 测试 aliyun CLI ==="
+          npm install -g aliyun-cli
+          ALIBABA_CLOUD_ACCESS_KEY_ID="$ALIYUN_AK" \
+          ALIBABA_CLOUD_ACCESS_KEY_SECRET="$ALIYUN_SK" \
+          ALIBABA_CLOUD_ACCOUNT_ID="$ALIYUN_ACCOUNT_ID" \
+          aliyun fc ListFunctions --region cn-shanghai --output json 2>&1 | head -5
 
-      # ---------- (2) 加载凭证到 runner 进程环境（不进 log） ----------
-      - name: Load creds via env-config
-        run: bash scripts/env-config-load.sh
+      # ---------- (2) Stage FC env 文件（从 secrets 写到 fc-deploy/prod.env，s.yaml 的 ${env(...)} 这里取）----------
+      - name: Stage FC env file
         env:
-          ENVCFG_PROFILE: docbase-prod
-          ENVCFG_KEYS: ALIYUN_AK,ALIYUN_SK,FC_VPC_ID,FC_VSW_ID,FC_SG_ID,FC_NAT_ID,PG_PRIVATE_HOST,PG_SUPER_URL,APP_DB_URL,REDIS_PRIVATE_HOST,REDIS_SUPER_URL,REDIS_APP_URL,BETTER_AUTH_SECRET,CERT_EMAIL,DOMAIN_REG_ID,CAS_CERT_ID,LE_EMAIL
-
-      # ---------- (3) 内网联通 check ----------
-      - name: Private network reachability
-        run: bash scripts/pre-deploy-checks.sh
-
-      # ---------- (4) 数据库迁移（vps → ECS PG）----------
-      - name: Drizzle migrations
-        if: github.event.inputs.skip_migrate != 'true' && github.event_name != 'schedule'
-        run: bash scripts/run-migrate.sh
-
-      # ---------- (5) 编译并打包 FC 层 ----------
-      - name: Install deps
-        run: pnpm install --frozen-lockfile --prefer-offline
-
-      - name: Build (TanStack Start)
-        run: pnpm build
-
-      - name: Generate latest migrations metadata (no-op if unchanged)
-        run: pnpm db:generate
-
-      - name: Build FC layer
-        run: pnpm build:fc
-
-      # ---------- (6) 证书续签 (每日定时 + workflow_dispatch 可选) ----------
-      - name: Renew Let's Encrypt certificate
-        if: github.event.inputs.skip_cert_renew != 'true' || github.event_name == 'schedule'
-        run: bash scripts/renew-cert.sh
-        env:
-          LE_EMAIL: ${{ env.LE_EMAIL }}
-          CERT_DOMAIN: ${{ env.DOCBASE_DOMAIN }}
-          CAS_CERT_ID: ${{ env.CAS_CERT_ID }}
-
-      # ---------- (7) s deploy ----------
-      - name: s plan (dry run)
-        run: bash scripts/s-deploy.sh plan
-
-      - name: s deploy (apply)
-        run: bash scripts/s-deploy.sh apply
-
-      # ---------- (8) 冒烟 ----------
-      - name: Smoke test — health endpoint
+          VPC_ID: ${{ secrets.VPC_ID }}
+          VSWITCH_ID: ${{ secrets.VSWITCH_ID }}
+          SECURITY_GROUP_ID: ${{ secrets.SECURITY_GROUP_ID }}
+          APP_DB_URL: ${{ secrets.APP_DB_URL }}
+          REDIS_APP_URL: ${{ secrets.REDIS_APP_URL }}
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
         run: |
-          set -e
-          for i in 1 2 3 4 5 6 7 8 9 10; do
-            STATUS=$(curl -sk -o /tmp/health.json -w '%{http_code}' \
-              "https://${DOCBASE_DOMAIN}/api/health" || echo 000)
-            echo "attempt $i: HTTP $STATUS"
-            if [ "$STATUS" = "200" ]; then
-              cat /tmp/health.json
-              echo
-              echo "✓ health OK"
-              exit 0
-            fi
-            sleep 5
-          done
-          echo "✗ health endpoint failed after 10 attempts" >&2
-          exit 1
+          set -euo pipefail
+          OUT="fc-deploy/prod.env"
+          {
+            echo "VPC_ID=${VPC_ID}"
+            echo "VSWITCH_ID=${VSWITCH_ID}"
+            echo "SECURITY_GROUP_ID=${SECURITY_GROUP_ID}"
+            echo "DATABASE_URL=${APP_DB_URL}"
+            echo "REDIS_URL=${REDIS_APP_URL}"
+            echo "BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}"
+            echo "BETTER_AUTH_URL=https://${DOCBASE_DOMAIN}"
+            echo "PUBLIC_APP_URL=https://${DOCBASE_DOMAIN}"
+            echo "BETTER_AUTH_TRUSTED_ORIGINS=https://${DOCBASE_DOMAIN},https://${DOCBASE_REGION}.fcapp.run"
+            echo "DOCBASE_DEPLOY_MODE=fc"
+            echo "DOCBASE_INSTALLED=true"
+            echo "LOG_LEVEL=info"
+          } > "$OUT"
+          chmod 600 "$OUT"
+          echo "=== prod.env (redacted for log) ==="
+          sed -E \
+            -e 's#^(VPC_ID|VSWITCH_ID|SECURITY_GROUP_ID|PUBLIC_APP_URL|BETTER_AUTH_URL|BETTER_AUTH_TRUSTED_ORIGINS|LOG_LEVEL|DOCBASE_DEPLOY_MODE|DOCBASE_INSTALLED|NODE_ENV|PORT|PATH)=.*#\1=***#' \
+            -e 's#^(DATABASE_URL|REDIS_URL|MIGRATE_DATABASE_URL|BETTER_AUTH_SECRET|ALIYUN_AK|ALIYUN_SK)(.*://)([^:]+):([^@]+)@(.*)#\1\2\3:****@\5#' \
+            "$OUT"
 
-      - name: Notify success
-        if: success()
-        run: bash scripts/notify.sh success
-        env:
-          DOCBASE_DOMAIN: ${{ env.DOCBASE_DOMAIN }}
-          GITHUB_REPO: ${{ github.repository }}
-          GITHUB_RUN_ID: ${{ github.run_id }}
-
-      - name: Notify failure
-        if: failure()
-        run: bash scripts/notify.sh failure || true
-        env:
-          DOCBASE_DOMAIN: ${{ env.DOCBASE_DOMAIN }}
-          GITHUB_REPO: ${{ github.repository }}
-          GITHUB_RUN_ID: ${{ github.run_id }}
+      # ---------- (3) 构建 + 发布到 FC + smoke ----------
+      - name: Build + deploy to FC + smoke
+        run: |
+          set -euo pipefail
+          echo "=== fc-deploy/prod.env what s sees (redacted) ==="
+          sed -E \
+            -e 's#^(VPC_ID|VSWITCH_ID|SECURITY_GROUP_ID|PUBLIC_APP_URL|BETTER_AUTH_URL|BETTER_AUTH_TRUSTED_ORIGINS|LOG_LEVEL|DOCBASE_DEPLOY_MODE|DOCBASE_INSTALLED|NODE_ENV|PORT|PATH)=.*#\1=***#' \
+            -e 's#^(DATABASE_URL|REDIS_URL|MIGRATE_DATABASE_URL|BETTER_AUTH_SECRET)(.*://)([^:]+):([^@]+)@(.*)#\1\2\3:****@\5#' \
+            fc-deploy/prod.env
+          bash scripts/deploy-fc.sh apply

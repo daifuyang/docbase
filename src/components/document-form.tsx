@@ -3,11 +3,15 @@
 import { useNavigate } from '@tanstack/react-router'
 import { CheckCircle2, FileText, FolderOpen, Save, Send, Tags } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { useMemo, useState, useTransition } from 'react'
-import { Editor } from '~/components/editor/editor'
+import { Suspense, lazy, useMemo, useState, useTransition } from 'react'
 import { TagInput } from '~/components/tag-input'
+import { cn } from '~/lib/utils'
 import { createDocument, updateDocument } from '~/server/documents'
 import type { CategorySummary, DocumentDetail, SpaceSummary, TipTapDoc } from '~/shared/types'
+
+const Editor = lazy(() =>
+  import('~/components/editor/editor').then((module) => ({ default: module.Editor })),
+)
 
 function getErrorMessage(error: unknown) {
   if (error instanceof Error) return error.message
@@ -98,22 +102,42 @@ export function DocumentForm({
           </div>
         )}
 
-        <section className="rounded-lg border border-border bg-surface p-4">
+        <div
+          className={cn(
+            'flex items-stretch overflow-hidden rounded-md border bg-surface transition-colors',
+            title.length >= 50
+              ? 'border-destructive focus-within:border-destructive focus-within:ring-1 focus-within:ring-destructive/30'
+              : 'border-input focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/30',
+          )}
+        >
           <input
             type="text"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             placeholder="输入一个可以被搜索和复用的标题"
-            maxLength={200}
-            className="block w-full border-0 bg-transparent px-0 py-1 text-2xl font-bold tracking-tight outline-none placeholder:text-muted-foreground/60"
+            maxLength={50}
+            aria-invalid={title.length >= 50 ? 'true' : undefined}
+            className={cn(
+              'min-w-0 flex-1 bg-transparent px-3 py-2 text-2xl font-bold tracking-tight outline-none placeholder:font-normal placeholder:text-muted-foreground/60',
+              title.length >= 50
+                ? 'text-destructive placeholder:text-destructive/40'
+                : 'text-foreground',
+            )}
           />
-          <div className="mt-2 flex items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground">
-            <span>标题会生成访问地址，发布后仍可编辑标题。</span>
-            <span>{title.length} / 200</span>
-          </div>
-        </section>
+          <span
+            aria-hidden="true"
+            className={cn(
+              'flex shrink-0 select-none items-center pr-3 text-xs tabular-nums',
+              title.length >= 50 ? 'text-destructive' : 'text-muted-foreground',
+            )}
+          >
+            {title.length} / 50
+          </span>
+        </div>
 
-        <Editor value={contentJson} onChange={setContentJson} placeholder="开始编写团队文档..." />
+        <Suspense fallback={<EditorFallback />}>
+          <Editor value={contentJson} onChange={setContentJson} placeholder="开始编写团队文档..." />
+        </Suspense>
       </main>
 
       <aside className="space-y-4">
@@ -162,7 +186,7 @@ export function DocumentForm({
                 setSpaceId(event.target.value)
                 setCategoryId('')
               }}
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus:border-primary focus:outline-none"
+              className="h-10 w-full cursor-pointer rounded-md border border-input bg-transparent px-3 text-sm transition-colors hover:border-primary/50 focus:border-primary focus:outline-none"
             >
               <option value="">请选择知识空间</option>
               {spaces.map((space) => (
@@ -178,7 +202,7 @@ export function DocumentForm({
             <select
               value={categoryId}
               onChange={(event) => setCategoryId(event.target.value)}
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus:border-primary focus:outline-none"
+              className="h-10 w-full cursor-pointer rounded-md border border-input bg-transparent px-3 text-sm transition-colors hover:border-primary/50 focus:border-primary focus:outline-none"
             >
               <option value="">不选择分类</option>
               {filteredCategories.map((category) => (
@@ -213,6 +237,27 @@ export function DocumentForm({
             : '当前文档尚未发布，草稿仅创建者可见。'}
         </section>
       </aside>
+    </div>
+  )
+}
+
+function EditorFallback() {
+  return (
+    <div className="rounded-md border border-input bg-background">
+      <div className="flex flex-wrap gap-1 border-b border-border p-2">
+        {Array.from({ length: 11 }).map((_, index) => (
+          <div
+            key={index}
+            className="h-8 w-8 rounded-md bg-surface-muted"
+            aria-hidden="true"
+          />
+        ))}
+      </div>
+      <div className="min-h-[320px] p-4">
+        <div className="h-4 w-52 rounded bg-surface-muted" />
+        <div className="mt-4 h-4 w-full max-w-2xl rounded bg-surface-muted" />
+        <div className="mt-3 h-4 w-full max-w-xl rounded bg-surface-muted" />
+      </div>
     </div>
   )
 }

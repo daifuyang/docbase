@@ -2,6 +2,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import {
   assertSameOrigin,
+  getInstallGuardState as getInstallGuardStateService,
   getInstallStateService,
   runInstallService,
   testInstallConfigService,
@@ -10,6 +11,10 @@ import { installConfigSchema, installInputSchema } from '~/shared/validation/ins
 
 export const getInstallState = createServerFn({ method: 'GET' }).handler(async () =>
   getInstallStateService(),
+)
+
+export const getInstallGuardState = createServerFn({ method: 'GET' }).handler(async () =>
+  getInstallGuardStateService(),
 )
 
 export const testInstallConfig = createServerFn({ method: 'POST' })

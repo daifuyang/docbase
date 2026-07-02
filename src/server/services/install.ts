@@ -25,6 +25,7 @@ import {
   getConfigPath,
   getInstallLockPath,
   getInstallingLockPath,
+  isFcDeployMode,
   loadRuntimeConfig,
   readEnvRuntimeConfig,
   readRuntimeConfig,
@@ -45,7 +46,52 @@ type CheckResult = { ok: boolean; message: string }
 
 const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>()
 
+export async function getInstallGuardState(): Promise<
+  Pick<InstallState, 'status' | 'hasConfig' | 'hasLock' | 'message'>
+> {
+  if (isFcDeployMode()) {
+    return {
+      status: 'ready',
+      hasConfig: Boolean(readEnvRuntimeConfig()),
+      hasLock: true,
+      message: 'FC 生产模式已关闭 Web 安装向导。',
+    }
+  }
+
+  const hasConfigFile = existsSync(getConfigPath())
+  const hasConfig = hasConfigFile || Boolean(readEnvRuntimeConfig())
+  const hasLock = isInstallLocked()
+
+  if (hasConfig && hasLock) {
+    return {
+      status: 'ready',
+      hasConfig,
+      hasLock,
+      message: '系统已安装。',
+    }
+  }
+
+  return {
+    status: 'needs-install',
+    hasConfig,
+    hasLock,
+    message: '系统尚未安装。',
+  }
+}
+
 export async function getInstallStateService(): Promise<InstallState> {
+  if (isFcDeployMode()) {
+    return {
+      status: 'ready',
+      hasConfig: Boolean(readEnvRuntimeConfig()),
+      hasLock: true,
+      db: 'unknown',
+      redis: 'unknown',
+      hasAdmin: false,
+      message: 'FC 生产模式已关闭 Web 安装向导。',
+    }
+  }
+
   const hasConfigFile = existsSync(getConfigPath())
   const envConfig = readEnvRuntimeConfig()
   const hasConfig = hasConfigFile || Boolean(envConfig)
@@ -209,6 +255,7 @@ function safeReadConfig(): RuntimeConfig | null {
 }
 
 function assertInstallAllowed() {
+  if (isFcDeployMode()) throw new Error('FC 生产模式已关闭 Web 安装接口。')
   if (isInstallLocked()) throw new Error('系统已安装，安装接口已关闭。')
   if (existsSync(getInstallingLockPath())) throw new Error('系统正在安装，请稍后再试。')
 }

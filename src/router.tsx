@@ -18,7 +18,10 @@ export function getRouter() {
     routeTree,
     context: { queryClient },
     defaultPreload: 'intent',
-    defaultPreloadStaleTime: 0,
+    defaultPreloadStaleTime: 30_000,
+    defaultStaleTime: 10_000,
+    defaultPendingMs: 180,
+    defaultPendingMinMs: 220,
     scrollRestoration: true,
   })
   return router

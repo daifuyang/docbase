@@ -1,3 +1,4 @@
+import type { JSONContent } from '@tiptap/core'
 import { and, asc, desc, eq, ilike, or, sql } from 'drizzle-orm'
 import * as schema from '~/../db/schema'
 import { db } from '~/lib/db.server'
@@ -6,7 +7,7 @@ import { rateLimit } from '~/lib/rate-limit.server'
 import { redis, withPrefix } from '~/lib/redis.server'
 import { slugify, withSuffix } from '~/lib/slug.server'
 import { renderTiptapToHtml } from '~/lib/tiptap.server'
-import type { DocumentDetail, DocumentSummary, PaginatedResponse } from '~/shared/types'
+import type { DocumentDetail, DocumentSummary, PaginatedResponse, TipTapDoc } from '~/shared/types'
 import type { CreateDocumentInput, UpdateDocumentInput } from '~/shared/validation/document'
 import { searchDocumentsSchema } from '~/shared/validation/document'
 import type { ServiceContext } from './context'
@@ -22,8 +23,6 @@ export async function listDocumentsService(
   const input = searchDocumentsSchema.parse(rawInput ?? {})
   return queryDocuments(input)
 }
-
-export const searchDocumentsService = listDocumentsService
 
 export async function listMyDocumentsService(
   ctx: ServiceContext,
@@ -58,6 +57,7 @@ export async function createDocumentService(
   const rl = await rateLimit('documents:create', ctx.userId, 10, 60)
   if (!rl.allowed) throw Errors.rateLimited(rl.resetAt)
 
+  const contentJson = normalizeDocumentContent(input.title, input.contentJson)
   const baseSlug = slugify(input.title)
   let finalSlug = baseSlug
   for (let suffix = 2; ; suffix++) {
@@ -77,8 +77,8 @@ export async function createDocumentService(
       categoryId: input.categoryId ?? null,
       title: input.title,
       slug: finalSlug,
-      contentJson: input.contentJson,
-      excerpt: extractExcerpt(input.contentJson),
+      contentJson,
+      excerpt: extractExcerpt(contentJson),
       status: input.status,
       publishedAt: input.status === 'published' ? new Date() : null,
     })
@@ -101,12 +101,21 @@ export async function updateDocumentService(
   if (!existing) throw Errors.notFound('文档不存在')
   if (existing.authorId !== ctx.userId) throw Errors.forbidden('只能编辑自己创建的文档')
 
+  const title = input.title ?? existing.title
+  const contentJson = normalizeDocumentContent(
+    title,
+    (input.contentJson ?? existing.contentJson) as TipTapDoc,
+  )
+
   await db
     .update(schema.document)
     .set({
-      title: input.title ?? existing.title,
-      contentJson: input.contentJson ?? existing.contentJson,
-      excerpt: input.contentJson ? extractExcerpt(input.contentJson) : existing.excerpt,
+      title,
+      contentJson,
+      excerpt:
+        input.contentJson || input.title !== undefined
+          ? extractExcerpt(contentJson)
+          : existing.excerpt,
       status: input.status ?? existing.status,
       spaceId: input.spaceId ?? existing.spaceId,
       categoryId: input.categoryId === undefined ? existing.categoryId : input.categoryId,
@@ -135,22 +144,6 @@ export async function deleteDocumentService(
   await db.delete(schema.document).where(eq(schema.document.id, input.id))
   await redis.del(withPrefix('cache:documents:list:*')).catch(() => {})
   return { ok: true }
-}
-
-/**
- * Resolve a document slug to its DB id (uuid).
- * Used by CLI commands that take a slug but need to call update/delete
- * (which operate on the uuid `id`).
- */
-export async function getDocumentIdBySlugService(
-  _ctx: ServiceContext,
-  input: { slug: string },
-): Promise<{ id: string; authorId: string; status: 'draft' | 'published' } | null> {
-  const row = await db.query.document.findFirst({
-    where: eq(schema.document.slug, input.slug),
-    columns: { id: true, authorId: true, status: true },
-  })
-  return row ?? null
 }
 
 /**
@@ -319,6 +312,7 @@ async function toSummary(row: {
     title: row.document.title,
     slug: row.document.slug,
     excerpt: row.document.excerpt,
+    status: row.document.status,
     creator,
     author: creator,
     space: {
@@ -363,13 +357,63 @@ async function replaceDocumentTags(documentId: string, names: string[]) {
 }
 
 function extractExcerpt(doc: unknown): string {
-  try {
-    return JSON.stringify(doc)
-      .replace(/<[^>]*>/g, ' ')
-      .replace(/[{}"\\[\\],:、。,.\s]+/g, ' ')
-      .trim()
-      .slice(0, 280)
-  } catch {
-    return ''
+  return collectPlainText(doc, { skipHeadings: true }).replace(/\s+/g, ' ').trim().slice(0, 280)
+}
+
+export function normalizeDocumentContent(title: string, doc: TipTapDoc): TipTapDoc {
+  if (!Array.isArray(doc.content)) return doc
+
+  const content = [...doc.content]
+  const first = content[0]
+  if (
+    isHeading(first, 1) &&
+    normalizeComparableText(collectPlainText(first)) === normalizeComparableText(title)
+  ) {
+    content.shift()
   }
+
+  return {
+    ...doc,
+    content: content.map(downgradeH1ToH2),
+  }
+}
+
+function downgradeH1ToH2(node: JSONContent): JSONContent {
+  if (!node || typeof node !== 'object' || Array.isArray(node)) return node
+  const current = node as JSONContent & { attrs?: Record<string, unknown> }
+  return {
+    ...current,
+    attrs:
+      current.type === 'heading' && current.attrs?.level === 1
+        ? { ...current.attrs, level: 2 }
+        : current.attrs,
+    content: Array.isArray(current.content)
+      ? current.content.map(downgradeH1ToH2)
+      : current.content,
+  }
+}
+
+function isHeading(node: unknown, level: number): boolean {
+  if (!node || typeof node !== 'object' || Array.isArray(node)) return false
+  const current = node as { type?: unknown; attrs?: { level?: unknown } }
+  return current.type === 'heading' && current.attrs?.level === level
+}
+
+function normalizeComparableText(value: string): string {
+  return value.replace(/\s+/g, ' ').trim()
+}
+
+function collectPlainText(value: unknown, options: { skipHeadings?: boolean } = {}): string {
+  if (!value || typeof value !== 'object') return ''
+  if (Array.isArray(value)) return value.map((item) => collectPlainText(item, options)).join(' ')
+
+  const node = value as {
+    type?: unknown
+    text?: unknown
+    content?: unknown
+  }
+  if (typeof node.text === 'string') return node.text
+  if (options.skipHeadings && node.type === 'heading') return ''
+
+  return collectPlainText(node.content, options)
 }

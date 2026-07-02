@@ -1,0 +1,91 @@
+# =============================================================================
+# DocBase — fc-deploy 自包含 FC 3.0 配置
+# =============================================================================
+# 与根目录的 s.yaml 平行存在。根目录的 s.yaml 给 CI runner + 自定义域名
+# (fc3-domain) 用，fc-deploy/s.yaml 给"本地能完整跑起来"的部署单元用。
+#
+# 线上 / 本地切换完全通过环境变量：
+#   - ${env(VPC_ID)} 等线上用真凭证，本地用 placeholder（fc3 local 不连 FC API）
+#   - 本地：cp .env.example .env && pnpm deploy:local
+#   - 线上：pnpm deploy 或 DOCBASE_FC_ENV_FILE=/path/to/prod.env pnpm deploy
+#
+# scripts/build-fc.mjs 只生成 fc-deploy/code/；FC 只上传 code/。
+# s.yaml / .env.example / README.md / prod.env 等部署侧文件不会进入函数代码包。
+# =============================================================================
+edition: 3.0.0
+name: docbase-fc-deploy
+access: default
+
+vars:
+  region: cn-shanghai
+  functionName: docbase-web
+  serviceName: docbase-prod
+
+resources:
+  docbase-web:
+    component: fc3
+    props:
+      region: ${vars.region}
+      serviceName: ${vars.serviceName}
+      functionName: ${vars.functionName}
+      description: DocBase enterprise knowledge base (TanStack Start on FC, fc-deploy/)
+      runtime: custom.debian12
+      code: ./code                       # 只上传真实运行时代码包，不上传部署侧文件
+      handler: not-used                  # custom runtime 时 FC 不使用 handler
+      timeout: 60
+      memorySize: 1024
+      cpu: 1
+      diskSize: 512
+      instanceConcurrency: 100
+      internetAccess: true
+      customRuntimeConfig:
+        # 线上：FC 把 fc-deploy/code/ mount 到 /code，bootstrap 在 /code/ 根
+        command:
+          - /code/bootstrap
+        port: 9000
+      logConfig:
+        project: docbase-fc-log
+        logstore: fc-log
+        enableRequestMetrics: false
+        enableInstanceMetrics: false
+      vpcConfig:
+        vpcId: ${env(VPC_ID)}
+        vSwitchIds:
+          - ${env(VSWITCH_ID)}
+        securityGroupId: ${env(SECURITY_GROUP_ID)}
+      triggers:
+        - triggerName: http-trigger
+          triggerType: http
+          qualifier: LATEST
+          triggerConfig:
+            authType: anonymous
+            methods:
+              - GET
+              - POST
+              - PUT
+              - PATCH
+              - DELETE
+              - OPTIONS
+              - HEAD
+      environmentVariables:
+        NODE_ENV: production
+        PORT: '9000'
+        # custom.debian12 自带 node22, 但 PATH 必须显式声明 (FC 不保证默认 PATH 包含它)
+        PATH: /var/fc/lang/nodejs22/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/sbin:/bin
+        # 安装锁（src/lib/runtime-config.server.ts 的 isInstallLocked() 同时识别
+        # 此 env 和 config/install.lock 文件）。线上必须设 'true'，否则：
+        #   - src/routes/__root.tsx 的 beforeLoad 会把每个请求 redirect 到 /install
+        #   - src/server/services/install.ts 的 assertInstallAllowed 会拒绝一切
+        #     写操作（防止已部署的实例被再次"重新安装"）
+        # 默认 'true'；本地 s local start 时可在 .env 里设 'false' 走安装向导。
+        DOCBASE_DEPLOY_MODE: fc
+        DOCBASE_INSTALLED: 'true'
+        DATABASE_URL: ${env(DATABASE_URL)}
+        REDIS_URL: ${env(REDIS_URL)}
+        BETTER_AUTH_SECRET: ${env(BETTER_AUTH_SECRET)}
+        BETTER_AUTH_URL:    ${env(BETTER_AUTH_URL)}
+        PUBLIC_APP_URL:     ${env(PUBLIC_APP_URL)}
+        # better-auth 信任的 Origin / Host 白名单（逗号分隔）。多个域时一起填，
+        # 比如：'https://docbase.zerocmf.com,https://docbase.example.cn'
+        BETTER_AUTH_TRUSTED_ORIGINS: ${env(BETTER_AUTH_TRUSTED_ORIGINS)}
+        LOG_LEVEL:          info

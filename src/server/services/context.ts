@@ -5,17 +5,16 @@ import { db } from '~/lib/db.server'
 import { Errors } from '~/lib/errors'
 
 /**
- * ServiceContext — the bridge between Web (session cookie) and CLI (API key).
+ * ServiceContext — the bridge between Web session cookies and API keys.
  *
  * Every service function takes a `ServiceContext` as its first argument
- * instead of calling `getRequestHeaders()` directly. Both the Web's
- * `createServerFn` shims and the CLI's command handlers build one.
+ * instead of calling `getRequestHeaders()` directly.
  *
  * Semantics:
  *   - `userId: string`     — always a valid user id (callers are responsible
  *                            for either authenticating or accepting the null
  *                            from `contextFromHeaders`).
- *   - `authKind: 'session' | 'apiKey' | 'cli'` — how the caller authenticated.
+ *   - `authKind: 'session' | 'apiKey' | 'system'` — how the caller authenticated.
  *   - `headers`            — original request headers (for IP / audit logging).
  *
  * To distinguish "no credentials" from "wrong credentials", use the nullable
@@ -27,7 +26,7 @@ export type ServiceContext = {
   /** The original request headers — useful for IP / audit logging. */
   headers: Headers
   /** Which credential produced this context. */
-  authKind: 'session' | 'apiKey' | 'cli'
+  authKind: 'session' | 'apiKey' | 'system'
 }
 
 /**
@@ -36,7 +35,7 @@ export type ServiceContext = {
  * `requireUserContext` (or short-circuit) themselves.
  *
  * Tries session cookie first (the Web's normal path); falls back to the
- * `x-api-key` header (the CLI's path, validated by the @better-auth/api-key
+ * `x-api-key` header (validated by the @better-auth/api-key
  * plugin).
  */
 export async function contextFromHeaders(headers: Headers): Promise<ServiceContext | null> {
@@ -45,8 +44,7 @@ export async function contextFromHeaders(headers: Headers): Promise<ServiceConte
     return { userId: session.user.id, headers, authKind: 'session' }
   }
 
-  // The api-key plugin's verifyApiKey needs the key in the body. When the
-  // CLI sends `x-api-key`, we forward it to verifyApiKey directly.
+  // The api-key plugin's verifyApiKey needs the key in the body.
   const apiKeyHeader = headers.get('x-api-key')
   if (apiKeyHeader) {
     const apiKey = (await auth.api.verifyApiKey({
@@ -71,13 +69,12 @@ export function requireUserContext(ctx: ServiceContext | null): ServiceContext {
 
 /**
  * Build a ServiceContext directly from a known userId. Use this when the
- * caller has already authenticated out-of-band (e.g. CLI `auth login`
- * calls signIn, then immediately wants to create an API key).
+ * caller has already authenticated out-of-band.
  */
 export function contextForUser(
   userId: string,
   headers: Headers = new Headers(),
-  authKind: ServiceContext['authKind'] = 'cli',
+  authKind: ServiceContext['authKind'] = 'system',
 ): ServiceContext {
   return { userId, headers, authKind }
 }

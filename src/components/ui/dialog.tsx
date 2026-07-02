@@ -29,7 +29,7 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        'fixed left-1/2 top-[12vh] z-50 grid w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 gap-4 rounded-xl border border-border bg-surface p-0 text-foreground shadow-lg focus:outline-none',
+        'fixed left-1/2 top-1/2 z-50 grid w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl border border-border bg-surface p-6 text-foreground shadow-lg focus:outline-none',
         className,
       )}
       {...props}
@@ -73,6 +73,14 @@ const DialogDescription = React.forwardRef<
 ))
 DialogDescription.displayName = DialogPrimitive.Description.displayName
 
+const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+  <div
+    className={cn('flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2', className)}
+    {...props}
+  />
+)
+DialogFooter.displayName = 'DialogFooter'
+
 export {
   Dialog,
   DialogPortal,
@@ -83,4 +91,5 @@ export {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 }

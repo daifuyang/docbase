@@ -1,12 +1,13 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
+import { z } from 'zod'
 import { LoginForm } from '~/components/login-form'
 import { getCurrentUser } from '~/server/auth'
-import { getInstallState } from '~/server/install'
 
 export const Route = createFileRoute('/auth/login')({
+  validateSearch: z.object({
+    redirect: z.string().optional(),
+  }),
   beforeLoad: async () => {
-    const installState = await getInstallState()
-    if (installState.status !== 'ready') throw redirect({ to: '/install' })
     const me = await getCurrentUser()
     if (me) throw redirect({ to: '/' })
   },
@@ -15,6 +16,8 @@ export const Route = createFileRoute('/auth/login')({
 })
 
 function LoginPage() {
+  const { redirect: redirectTo } = Route.useSearch()
+
   return (
     <div
       className="relative min-h-screen overflow-hidden bg-[#f5f7fb] bg-cover bg-no-repeat"
@@ -42,7 +45,7 @@ function LoginPage() {
               </h1>
               <p className="mt-3 text-sm leading-6 text-[#737373]">登录 DocBase 企业知识库</p>
             </div>
-            <LoginForm />
+            <LoginForm redirectTo={redirectTo} />
           </div>
         </main>
       </div>

@@ -1,7 +1,7 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useNavigate } from '@tanstack/react-router'
+import { useRouter } from '@tanstack/react-router'
 import { useServerFn } from '@tanstack/react-start'
 import { Eye, EyeOff } from 'lucide-react'
 import { useState, useTransition } from 'react'
@@ -20,8 +20,14 @@ function getErrorField(error: unknown, field: 'code' | 'message') {
   return typeof nestedValue === 'string' ? nestedValue : undefined
 }
 
-export function LoginForm() {
-  const navigate = useNavigate()
+function normalizeRedirect(value: string | undefined): string {
+  if (!value || !value.startsWith('/') || value.startsWith('//')) return '/'
+  return value
+}
+
+export function LoginForm({ redirectTo }: { redirectTo?: string }) {
+  const router = useRouter()
+  const safeRedirectTo = normalizeRedirect(redirectTo)
   const signInFn = useServerFn(signIn)
   const [serverError, setServerError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
@@ -41,7 +47,8 @@ export function LoginForm() {
     startTransition(async () => {
       try {
         await signInFn({ data: values })
-        navigate({ to: '/' })
+        await router.invalidate()
+        router.history.push(safeRedirectTo)
       } catch (err: unknown) {
         const code = getErrorField(err, 'code')
         if (code === 'INVALID_CREDENTIALS') setServerError('账号或密码错误')
@@ -67,7 +74,7 @@ export function LoginForm() {
           placeholder="请输入账号"
           {...register('account')}
           aria-label="账号"
-          className="block h-11 w-full rounded-md border border-[#d9d9d9] bg-white px-3.5 text-sm text-[#1f1f1f] caret-[#1677ff] transition-colors placeholder:text-[#8c8c8c] hover:border-[#4096ff] focus:border-[#1677ff] focus:outline-none focus:ring-2 focus:ring-[#1677ff]/15"
+          className="block h-11 w-full rounded-md border border-[#d9d9d9] bg-white px-3.5 text-sm text-[#1f1f1f] caret-[#1677ff] transition-colors placeholder:text-[#8c8c8c] hover:border-[#4096ff] focus:border-[#1677ff] focus:outline-none"
         />
         {errors.account && <p className="text-xs text-destructive">{errors.account.message}</p>}
       </div>
@@ -81,12 +88,12 @@ export function LoginForm() {
             placeholder="请输入密码"
             {...register('password')}
             aria-label="密码"
-            className="block h-11 w-full rounded-md border border-[#d9d9d9] bg-white px-3.5 pr-11 text-sm text-[#1f1f1f] caret-[#1677ff] transition-colors placeholder:text-[#8c8c8c] hover:border-[#4096ff] focus:border-[#1677ff] focus:outline-none focus:ring-2 focus:ring-[#1677ff]/15"
+            className="block h-11 w-full rounded-md border border-[#d9d9d9] bg-white px-3.5 pr-11 text-sm text-[#1f1f1f] caret-[#1677ff] transition-colors placeholder:text-[#8c8c8c] hover:border-[#4096ff] focus:border-[#1677ff] focus:outline-none"
           />
           <button
             type="button"
             onClick={() => setShowPassword((value) => !value)}
-            className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-[#8c8c8c] transition-colors hover:bg-[#f5f5f5] hover:text-[#262626] focus:outline-none focus:ring-2 focus:ring-[#1677ff]/15"
+            className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-[#8c8c8c] transition-colors hover:bg-[#f5f5f5] hover:text-[#262626] focus:outline-none"
             aria-label={showPassword ? '隐藏密码' : '显示密码'}
           >
             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
