@@ -7,11 +7,12 @@ name: Deploy (CD)
 #   cd <repo> && pnpm build:fc:local
 #   cd fc-deploy && set -a && source prod.env && set +a && npx s deploy -y
 # 这里用 `scripts/deploy-fc.sh apply` 把整条链封装到一步：
-#   load_env → 可选 preflight/migrate/admin → build → s deploy → smoke。
+#   load_env → optional preflight/migrate/admin → build → s deploy → smoke。
 #
 # 触发：push to deploy / workflow_dispatch（手动）
-# Runner：内网 VPS self-hosted（标签 self-hosted, fc-deploy, docbase）
-# 凭证：通过 env-config + $ENVCFG_KEYS 注入到 $GITHUB_ENV
+# Runner：GitHub 托管 ubuntu-latest
+# 凭证：GitHub Secrets 直接注入（ALIYUN_AK/SK 等）
+# 证书：证书续签由 cert-renew.yml 单独每天检查处理
 # =============================================================================
 
 on:
@@ -27,10 +28,6 @@ on:
         description: Skip admin account ensure
         required: false
         default: 'false'
-      skip_cert_renew:
-        description: Skip certificate renewal
-        required: false
-        default: 'false'
 
 concurrency:
   group: deploy-docbase
@@ -39,7 +36,7 @@ concurrency:
 jobs:
   deploy:
     name: deploy → FC cn-shanghai
-    runs-on: [self-hosted, fc-deploy, docbase]
+    runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/deploy' || github.event_name == 'workflow_dispatch'
     timeout-minutes: 30
 
@@ -56,33 +53,26 @@ jobs:
           fetch-depth: 1
           ref: deploy
 
-      # ---------- (1) 工具自检 ----------
-      - name: Verify runner toolchain
+      # ---------- (1) 安装工具 ----------
+      - name: Install tools
         run: |
           set -e
-          for tool in pnpm node psql redis-cli aliyun s certbot; do
-            if ! command -v "$tool" >/dev/null 2>&1; then
-              echo "✗ MISSING: $tool" >&2
-              exit 1
-            fi
-            echo "✓ $tool -> $(command -v $tool)"
-          done
+          npm install -g @serverless-devs/s
+          s --version
 
-      # ---------- (2) 凭证：env-config → $GITHUB_ENV ----------
-      # 与本地 prod.env 同源：把 env-config 里的 key=value 写到 env 文件，
-      # 让 deploy-fc.sh 通过 DOCBASE_FC_ENV_FILE 直接读取（一致路径）。
-      - name: Stage FC env file from env-config
+      # ---------- (2) Stage FC env 文件 ----------
+      - name: Stage FC env file
         run: |
           set -euo pipefail
           : "${RUNNER_TEMP:=/tmp}"
           OUT="$RUNNER_TEMP/docbase-fc.env"
           {
-            echo "VPC_ID=${FC_VPC_ID:-}"
-            echo "VSWITCH_ID=${FC_VSW_ID:-}"
-            echo "SECURITY_GROUP_ID=${FC_SG_ID:-}"
-            echo "DATABASE_URL=${APP_DB_URL:-}"
-            echo "REDIS_URL=${REDIS_APP_URL:-}"
-            echo "BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-}"
+            echo "VPC_ID=${VPC_ID}"
+            echo "VSWITCH_ID=${VSWITCH_ID}"
+            echo "SECURITY_GROUP_ID=${SECURITY_GROUP_ID}"
+            echo "DATABASE_URL=${APP_DB_URL}"
+            echo "REDIS_URL=${REDIS_APP_URL}"
+            echo "BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}"
             echo "BETTER_AUTH_URL=https://${DOCBASE_DOMAIN}"
             echo "PUBLIC_APP_URL=https://${DOCBASE_DOMAIN}"
             echo "BETTER_AUTH_TRUSTED_ORIGINS=https://${DOCBASE_DOMAIN},https://${DOCBASE_REGION}.fcapp.run"
@@ -91,36 +81,15 @@ jobs:
             echo "LOG_LEVEL=info"
           } >> "$OUT"
           chmod 600 "$OUT"
-        env:
-          ENVCFG_PROFILE: docbase-prod
-          ENVCFG_KEYS: ALIYUN_AK,ALIYUN_SK,FC_VPC_ID,FC_VSW_ID,FC_SG_ID,APP_DB_URL,REDIS_APP_URL,BETTER_AUTH_SECRET
-
-      - name: Load creds into runner env (for child steps)
-        run: bash scripts/env-config-load.sh
-        env:
-          ENVCFG_PROFILE: docbase-prod
-          ENVCFG_KEYS: ALIYUN_AK,ALIYUN_SK,FC_VPC_ID,FC_VSW_ID,FC_SG_ID,APP_DB_URL,REDIS_APP_URL,BETTER_AUTH_SECRET,LE_EMAIL,CAS_CERT_ID
 
       # ---------- (3) 数据库迁移（workflow_dispatch 可选跳过） ----------
-      - name: Drizzle migrations (private network)
+      - name: Drizzle migrations
         if: github.event.inputs.skip_migrate != 'true'
         run: bash scripts/run-migrate.sh
         env:
-          APP_DB_URL: ${{ env.APP_DB_URL }}
+          APP_DB_URL: ${{ secrets.APP_DB_URL }}
 
-      # ---------- (4) 续签证书（workflow_dispatch 可选跳过）----------
-      - name: Renew Let's Encrypt certificate
-        if: github.event.inputs.skip_cert_renew != 'true'
-        run: bash scripts/renew-cert.sh
-        env:
-          LE_EMAIL: ${{ env.LE_EMAIL }}
-          CERT_DOMAIN: ${{ env.DOCBASE_DOMAIN }}
-          CAS_CERT_ID: ${{ env.CAS_CERT_ID }}
-
-      # ---------- (5) 一键发布：build + s deploy + smoke ----------
-      # 等价于本地：
-      #   pnpm build:fc:local
-      #   (cd fc-deploy && npx s deploy -y)
+      # ---------- (4) 构建 + 发布到 FC + smoke ----------
       - name: Build + deploy to FC + smoke
         env:
           DOCBASE_FC_ENV_FILE: ${{ runner.temp }}/docbase-fc.env
@@ -129,14 +98,12 @@ jobs:
           DOCBASE_RUN_ADMIN_ENSURE: ${{ github.event.inputs.skip_admin_ensure != 'true' && '1' || '0' }}
         run: |
           set -euo pipefail
-          # 同步 prod.env（s.yaml 读 prod.env 路径；这里通过 DOCBASE_FC_ENV_FILE 注入同样内容）
           cp "$DOCBASE_FC_ENV_FILE" /tmp/docbase-fc.env
           cp /tmp/docbase-fc.env fc-deploy/prod.env
           chmod 600 fc-deploy/prod.env
-          # 同一脚本：本地手动 + CI 自动
           bash scripts/deploy-fc.sh apply
 
-      # ---------- (6) 通知 ----------
+      # ---------- (5) 通知 ----------
       - name: Notify success
         if: success()
         run: bash scripts/notify.sh success
