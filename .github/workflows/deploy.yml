@@ -56,7 +56,20 @@ jobs:
           pnpm --version
           mkdir -p ~/.s
           printf 'default:\n  AccessKeyID: "%s"\n  AccessKeySecret: "%s"\n  AccountID: "%s"\n' "$ALIYUN_AK" "$ALIYUN_SK" "$ALIYUN_ACCOUNT_ID" > ~/.s/access.yaml
+          echo "=== access.yaml 内容 ==="
           cat ~/.s/access.yaml
+          echo "=== s config get ==="
+          s config get -a default
+          echo "=== env vars (脱敏) ==="
+          echo "ALIYUN_AK=${ALIYUN_AK:0:4}***"
+          echo "ALIYUN_SK=${ALIYUN_SK:0:4}***"
+          echo "ALIYUN_ACCOUNT_ID=${ALIYUN_ACCOUNT_ID:0:4}***"
+          echo "=== 测试 aliyun CLI ==="
+          npm install -g aliyun-cli
+          ALIBABA_CLOUD_ACCESS_KEY_ID="$ALIYUN_AK" \
+          ALIBABA_CLOUD_ACCESS_KEY_SECRET="$ALIYUN_SK" \
+          ALIBABA_CLOUD_ACCOUNT_ID="$ALIYUN_ACCOUNT_ID" \
+          aliyun fc ListFunctions --region cn-shanghai --output json 2>&1 | head -5
 
       # ---------- (2) Stage FC env 文件 ----------
       - name: Stage FC env file
