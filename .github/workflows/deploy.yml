@@ -98,8 +98,11 @@ jobs:
             echo "LOG_LEVEL=info"
           } > "$OUT"
           chmod 600 "$OUT"
-          echo "=== prod.env (UNREDACTED - debug only, remove after) ==="
-          cat "$OUT"
+          echo "=== prod.env (redacted for log) ==="
+          sed -E \
+            -e 's#^(VPC_ID|VSWITCH_ID|SECURITY_GROUP_ID|PUBLIC_APP_URL|BETTER_AUTH_URL|BETTER_AUTH_TRUSTED_ORIGINS|LOG_LEVEL|DOCBASE_DEPLOY_MODE|DOCBASE_INSTALLED|NODE_ENV|PORT|PATH)=.*#\1=***#' \
+            -e 's#^(DATABASE_URL|REDIS_URL|MIGRATE_DATABASE_URL|BETTER_AUTH_SECRET|ALIYUN_AK|ALIYUN_SK)(.*://)([^:]+):([^@]+)@(.*)#\1\2\3:****@\5#' \
+            "$OUT"
 
       # ---------- (3) 构建 + 发布到 FC + smoke ----------
       - name: Build + deploy to FC + smoke
@@ -107,8 +110,11 @@ jobs:
           DOCBASE_RUN_PREFLIGHT: '0'
         run: |
           set -euo pipefail
-          echo "=== fc-deploy/prod.env (redacted) ==="
-          sed -E 's#(SECRET|PASSWORD|URL|TOKEN|KEY)=(.+)#\1=***REDACTED***#g' fc-deploy/prod.env
+          echo "=== fc-deploy/prod.env what s sees (redacted) ==="
+          sed -E \
+            -e 's#^(VPC_ID|VSWITCH_ID|SECURITY_GROUP_ID|PUBLIC_APP_URL|BETTER_AUTH_URL|BETTER_AUTH_TRUSTED_ORIGINS|LOG_LEVEL|DOCBASE_DEPLOY_MODE|DOCBASE_INSTALLED|NODE_ENV|PORT|PATH)=.*#\1=***#' \
+            -e 's#^(DATABASE_URL|REDIS_URL|MIGRATE_DATABASE_URL|BETTER_AUTH_SECRET)(.*://)([^:]+):([^@]+)@(.*)#\1\2\3:****@\5#' \
+            fc-deploy/prod.env
           bash scripts/deploy-fc.sh apply
 
       # ---------- (4) 通知 ----------
