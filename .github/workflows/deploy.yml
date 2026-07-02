@@ -62,8 +62,9 @@ jobs:
           set -e
           npm install -g @serverless-devs/s
           s --version
-          # 配置 s 凭证（enterprise AK/SK 用于 FC 部署）
-          s config add --AccessKeyID "$ALIYUN_AK" --AccessKeySecret "$ALIYUN_SK" --Provider aliyun --Alias default
+          # 配置 s 凭证（s.yaml 用 access: default）
+          s config delete -a default --silent 2>/dev/null || true
+          s config add --AccessKeyID "$ALIYUN_AK" --AccessKeySecret "$ALIYUN_SK" --AccountID 165000000000000 --silent -a default
 
       # ---------- (2) Stage FC env 文件 ----------
       - name: Stage FC env file
