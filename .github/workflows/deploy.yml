@@ -18,8 +18,7 @@ name: Deploy (CD)
 on:
   push:
     branches: [deploy]
-  workflow_dispatch:
-    inputs:
+
 concurrency:
   group: deploy-docbase
   cancel-in-progress: false
@@ -56,14 +55,10 @@ jobs:
           pnpm --version
           # 写明文 access.yaml（s 可以直接读）
           mkdir -p ~/.s
-          cat > ~/.s/access.yaml << 'EOF'
-default:
-  AccessKeyID: ALIYUN_AK
-  AccessKeySecret: ALIYUN_SK
-EOF
-          sed -i "s/ALIYUN_AK/$ALIYUN_AK/" ~/.s/access.yaml
-          sed -i "s/ALIYUN_SK/$ALIYUN_SK/" ~/.s/access.yaml
-          s config get -a default
+          echo "default:" > ~/.s/access.yaml
+          echo "  AccessKeyID: $ALIYUN_AK" >> ~/.s/access.yaml
+          echo "  AccessKeySecret: $ALIYUN_SK" >> ~/.s/access.yaml
+          cat ~/.s/access.yaml
 
       # ---------- (2) Stage FC env 文件 ----------
       - name: Stage FC env file
