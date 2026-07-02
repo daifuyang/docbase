@@ -20,11 +20,6 @@ on:
     branches: [deploy]
   workflow_dispatch:
     inputs:
-      skip_admin_ensure:
-        description: Skip admin account ensure
-        required: false
-        default: 'false'
-
 concurrency:
   group: deploy-docbase
   cancel-in-progress: false
@@ -99,7 +94,7 @@ jobs:
         env:
           DOCBASE_FC_ENV_FILE: ${{ runner.temp }}/docbase-fc.env
           DOCBASE_RUN_PREFLIGHT: '0'
-          DOCBASE_RUN_ADMIN_ENSURE: ${{ github.event.inputs.skip_admin_ensure != 'true' && '1' || '0' }}
+          DOCBASE_RUN_ADMIN_ENSURE: '0'
         run: |
           set -euo pipefail
           cp "$DOCBASE_FC_ENV_FILE" /tmp/docbase-fc.env
