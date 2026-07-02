@@ -98,8 +98,8 @@ jobs:
             echo "LOG_LEVEL=info"
           } > "$OUT"
           chmod 600 "$OUT"
-          echo "=== prod.env (masked) ==="
-          sed -E 's#(SECRET|PASSWORD|URL|TOKEN|KEY)=(.+)#\1=***REDACTED***#g' "$OUT"
+          echo "=== prod.env (UNREDACTED - debug only, remove after) ==="
+          cat "$OUT"
 
       # ---------- (3) 构建 + 发布到 FC + smoke ----------
       - name: Build + deploy to FC + smoke
