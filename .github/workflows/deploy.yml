@@ -54,7 +54,7 @@ jobs:
           s --version
           pnpm --version
           mkdir -p ~/.s
-          printf '%s\n' "$S_ACCESS_YAML" > ~/.s/access.yaml
+          echo "$S_ACCESS_YAML" > ~/.s/access.yaml
           s config get -a default
 
       # ---------- (2) Stage FC env 文件 ----------
