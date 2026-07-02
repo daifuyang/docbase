@@ -71,7 +71,7 @@ jobs:
           ALIBABA_CLOUD_ACCOUNT_ID="$ALIYUN_ACCOUNT_ID" \
           aliyun fc ListFunctions --region cn-shanghai --output json 2>&1 | head -5
 
-      # ---------- (2) Stage FC env 文件 ----------
+      # ---------- (2) Stage FC env 文件（从 secrets 写到 fc-deploy/prod.env，s.yaml 的 ${env(...)} 这里取）----------
       - name: Stage FC env file
         env:
           VPC_ID: ${{ secrets.VPC_ID }}
@@ -82,8 +82,7 @@ jobs:
           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
         run: |
           set -euo pipefail
-          : "${RUNNER_TEMP:=/tmp}"
-          OUT="$RUNNER_TEMP/docbase-fc.env"
+          OUT="fc-deploy/prod.env"
           {
             echo "VPC_ID=${VPC_ID}"
             echo "VSWITCH_ID=${VSWITCH_ID}"
@@ -97,19 +96,17 @@ jobs:
             echo "DOCBASE_DEPLOY_MODE=fc"
             echo "DOCBASE_INSTALLED=true"
             echo "LOG_LEVEL=info"
-          } >> "$OUT"
+          } > "$OUT"
           chmod 600 "$OUT"
+          echo "=== prod.env (masked) ==="
+          sed -E 's#(SECRET|PASSWORD|URL|TOKEN|KEY)=(.+)#\1=***REDACTED***#g' "$OUT"
 
       # ---------- (3) 构建 + 发布到 FC + smoke ----------
       - name: Build + deploy to FC + smoke
         env:
-          DOCBASE_FC_ENV_FILE: ${{ runner.temp }}/docbase-fc.env
           DOCBASE_RUN_PREFLIGHT: '0'
         run: |
           set -euo pipefail
-          cp "$DOCBASE_FC_ENV_FILE" /tmp/docbase-fc.env
-          cp /tmp/docbase-fc.env fc-deploy/prod.env
-          chmod 600 fc-deploy/prod.env
           bash scripts/deploy-fc.sh apply
 
       # ---------- (4) 通知 ----------
