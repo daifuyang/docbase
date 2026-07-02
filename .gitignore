@@ -62,5 +62,7 @@ drizzle/
 
 # External / downloaded skills (see .claude/skills/ for project-owned skills)
 .agents/
+.trae/
+.codex/
 skills-lock.json
 .claude/skills/skill-creator
