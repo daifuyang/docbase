@@ -53,13 +53,9 @@ jobs:
           npm install -g @serverless-devs/s pnpm
           s --version
           pnpm --version
-          # 用 s config add 配置凭证（显式传入 AccountID）
-          s config add \
-            --AccessKeyID "$ALIYUN_AK" \
-            --AccessKeySecret "$ALIYUN_SK" \
-            --AccountID "$ALIYUN_ACCOUNT_ID" \
-            --access default -f
-          s config get -a default
+          mkdir -p ~/.s
+          printf '%s\n' 'default:' "  AccessKeyID: $ALIYUN_AK" "  AccessKeySecret: $ALIYUN_SK" "  AccountID: $ALIYUN_ACCOUNT_ID" > ~/.s/access.yaml
+          cat ~/.s/access.yaml
 
       # ---------- (2) Stage FC env 文件 ----------
       - name: Stage FC env file
