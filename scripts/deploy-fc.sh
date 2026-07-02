@@ -119,12 +119,6 @@ migrate_database() {
   (cd "$ROOT" && bash scripts/migrate-prod.sh)
 }
 
-ensure_admin() {
-  require_env DOCBASE_ADMIN_EMAIL DOCBASE_ADMIN_USERNAME DOCBASE_ADMIN_PASSWORD
-  log "ensure production admin"
-  (cd "$ROOT" && pnpm exec tsx scripts/admin-ensure.mts)
-}
-
 optional_release_steps() {
   if [ "${DOCBASE_RUN_PREFLIGHT:-0}" = "1" ]; then
     preflight
@@ -136,12 +130,6 @@ optional_release_steps() {
     migrate_database
   else
     log "skip database migrate; set DOCBASE_RUN_MIGRATIONS=1 to enable"
-  fi
-
-  if [ "${DOCBASE_RUN_ADMIN_ENSURE:-0}" = "1" ]; then
-    ensure_admin
-  else
-    log "skip admin ensure; set DOCBASE_RUN_ADMIN_ENSURE=1 to enable"
   fi
 }
 

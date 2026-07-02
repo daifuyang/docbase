@@ -94,7 +94,6 @@ jobs:
         env:
           DOCBASE_FC_ENV_FILE: ${{ runner.temp }}/docbase-fc.env
           DOCBASE_RUN_PREFLIGHT: '0'
-          DOCBASE_RUN_ADMIN_ENSURE: '0'
         run: |
           set -euo pipefail
           cp "$DOCBASE_FC_ENV_FILE" /tmp/docbase-fc.env
