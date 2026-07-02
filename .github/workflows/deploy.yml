@@ -7,7 +7,7 @@ name: Deploy (CD)
 #   cd <repo> && pnpm build:fc:local
 #   cd fc-deploy && set -a && source prod.env && set +a && npx s deploy -y
 # 这里用 `scripts/deploy-fc.sh apply` 把整条链封装到一步：
-#   load_env → optional preflight/migrate/admin → build → s deploy → smoke。
+#   load_env → build → s deploy → smoke。（migrate 和 admin 由人工单独处理）
 #
 # 触发：push to deploy / workflow_dispatch（手动）
 # Runner：GitHub 托管 ubuntu-latest
@@ -21,9 +21,9 @@ on:
   workflow_dispatch:
     inputs:
       skip_migrate:
-        description: Skip DB migrations (FC re-deploy only)
+        description: Skip DB migrations (migrations are done manually)
         required: false
-        default: 'false'
+        default: 'true'
       skip_admin_ensure:
         description: Skip admin account ensure
         required: false
@@ -98,14 +98,7 @@ jobs:
           } >> "$OUT"
           chmod 600 "$OUT"
 
-      # ---------- (3) 数据库迁移（workflow_dispatch 可选跳过） ----------
-      - name: Drizzle migrations
-        if: github.event.inputs.skip_migrate != 'true'
-        run: bash scripts/run-migrate.sh
-        env:
-          APP_DB_URL: ${{ secrets.APP_DB_URL }}
-
-      # ---------- (4) 构建 + 发布到 FC + smoke ----------
+      # ---------- (3) 构建 + 发布到 FC + smoke ----------
       - name: Build + deploy to FC + smoke
         env:
           DOCBASE_FC_ENV_FILE: ${{ runner.temp }}/docbase-fc.env
@@ -119,7 +112,7 @@ jobs:
           chmod 600 fc-deploy/prod.env
           bash scripts/deploy-fc.sh apply
 
-      # ---------- (5) 通知 ----------
+      # ---------- (4) 通知 ----------
       - name: Notify success
         if: success()
         run: bash scripts/notify.sh success
