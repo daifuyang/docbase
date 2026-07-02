@@ -54,9 +54,8 @@ jobs:
           npm install -g @serverless-devs/s pnpm
           s --version
           pnpm --version
-          # 配置 s 凭证（s.yaml 用 access: default，对应 enterprise AK/SK）
-          s config delete -a default --silent 2>/dev/null || true
-          s config add --AccessKeyID "$ALIYUN_AK" --AccessKeySecret "$ALIYUN_SK" --AccountID 165000000000000 --silent -a default
+          # s config add 写加密格式的 access.yaml
+          s config add --AccessKeyID "$ALIYUN_AK" --AccessKeySecret "$ALIYUN_SK" --silent -a default
 
       # ---------- (2) Stage FC env 文件 ----------
       - name: Stage FC env file
@@ -67,8 +66,6 @@ jobs:
           APP_DB_URL: ${{ secrets.APP_DB_URL }}
           REDIS_APP_URL: ${{ secrets.REDIS_APP_URL }}
           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
-          ALIYUN_AK: ${{ secrets.ALIYUN_AK }}
-          ALIYUN_SK: ${{ secrets.ALIYUN_SK }}
         run: |
           set -euo pipefail
           : "${RUNNER_TEMP:=/tmp}"
