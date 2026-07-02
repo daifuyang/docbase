@@ -21,16 +21,3 @@ export const logger = pino({
     return ctx ?? {}
   },
 })
-
-export function withLogContext<T>(ctx: LogContext, fn: () => T): T {
-  return storage.run(ctx, fn)
-}
-
-export function setLogContext(patch: Partial<LogContext>): void {
-  const store = storage.getStore()
-  if (store) Object.assign(store, patch)
-}
-
-export function getLogContext(): LogContext | undefined {
-  return storage.getStore()
-}

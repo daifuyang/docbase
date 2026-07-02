@@ -2,13 +2,14 @@
 
 适用范围：DocBase 生产环境，TanStack Start 应用部署到阿里云函数计算 FC 3.0，PostgreSQL 和 Redis 通过阿里云 VPC 私网访问。
 
+> **同步状态**：本文件的「架构、发布标准、流程、踩坑」与 DocBase 知识库的 [TanStack Start 阿里云函数计算发布规范（附录 A）](https://docbase.zerocmf.com/api/v1/documents/tanstack-start-2) 保持一致。仓库镜像作为 PR review 上下文，正式变更以知识库为准。
+
 ## 架构
 
 ```text
 GitHub deploy 分支
-  -> self-hosted runner
-  -> env-config 加载生产凭证
-  -> preflight / migrate
+  -> GitHub Actions runner
+  -> GitHub Secrets 注入生产凭证
   -> pnpm build
   -> pnpm build:fc 生成 fc-deploy/code
   -> Serverless Devs 部署 fc-deploy/s.yaml
@@ -73,13 +74,13 @@ exec node .output/server/index.mjs
 | VPC / VSwitch / SecurityGroup | FC 与 PG/Redis 位于可互通网络内 |
 | PostgreSQL 16 | 建议单独应用账号 `docbase_app` |
 | Redis 7 | 建议单独应用账号或受限 ACL |
-| RAM 凭证 | runner 可执行 FC 发布、必要时可执行证书流程 |
-| 自托管 runner | 位于可访问 PG/Redis 私网的机器 |
+| RAM 凭证 | runner 可执行 FC 发布 |
+| GitHub Actions runner | 可安装 `pnpm`、`@serverless-devs/s`、`aliyun-cli` |
 | 域名与证书 | 独立流程维护，不混入函数代码发布包 |
 
 ## 环境变量
 
-runner 侧通过 `env-config` 加载原始凭证，workflow 会映射为 `deploy-fc.sh` 需要的标准变量：
+workflow 侧通过 GitHub Secrets 注入原始凭证，并映射为 `deploy-fc.sh` 需要的标准变量：
 
 | 标准变量 | 来源示例 |
 | --- | --- |
@@ -123,12 +124,6 @@ pnpm deploy
 DOCBASE_FC_ENV_FILE=/path/to/prod.env pnpm deploy
 ```
 
-完整 release，包括 preflight、迁移和管理员确保：
-
-```bash
-pnpm deploy:release
-```
-
 只构建 FC 上传包：
 
 ```bash
@@ -146,22 +141,14 @@ DOCBASE_SKIP_BUILD=1 pnpm deploy
 `.github/workflows/deploy.yml` 触发：
 
 - push 到 `deploy` 分支
-- 手动 `workflow_dispatch`
-- 定时任务，用于证书续签和增量发布
 
 流程：
 
 1. checkout `deploy`。
-2. 校验 runner 工具链。
-3. `env-config` 加载生产环境变量。
-4. `scripts/pre-deploy-checks.sh` 检查 PG、Redis、阿里云 API。
-5. 非定时任务执行数据库迁移。
-6. 生成 `$RUNNER_TEMP/docbase-fc.env`。
-7. `scripts/deploy-fc.sh package` 构建并校验 `fc-deploy/code/`。
-8. 证书续签流程按需执行。
-9. `scripts/deploy-fc.sh plan`。
-10. `scripts/deploy-fc.sh apply`。
-11. `/api/health` 冒烟。
+2. 安装并校验 `pnpm`、`@serverless-devs/s`、`aliyun-cli`。
+3. 生成 `fc-deploy/prod.env`。
+4. `scripts/deploy-fc.sh apply`。
+5. `/api/health` 冒烟。
 
 ## 回滚
 

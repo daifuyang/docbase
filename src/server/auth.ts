@@ -9,7 +9,6 @@ import {
   revokeApiKeyService,
   signInService,
   signOutService,
-  signUpService,
 } from '~/server/services/auth'
 import { contextFromHeaders, requireUserContext } from '~/server/services/context'
 import {
@@ -34,12 +33,8 @@ export const listMembers = createServerFn({ method: 'GET' }).handler(async () =>
 )
 
 // =============================================================================
-// signUp / signIn / signOut (US3 / US4)
+// signIn / signOut (US4)
 // =============================================================================
-export const signUp = createServerFn({ method: 'POST' })
-  .validator(signUpSchema)
-  .handler(async ({ data }) => signUpService(data))
-
 export const signIn = createServerFn({ method: 'POST' })
   .validator(signInSchema)
   .handler(async ({ data }) => signInService(data))

@@ -7,7 +7,7 @@ name: Deploy (CD)
 #   cd <repo> && pnpm build:fc:local
 #   cd fc-deploy && set -a && source prod.env && set +a && npx s deploy -y
 # 这里用 `scripts/deploy-fc.sh apply` 把整条链封装到一步：
-#   load_env → build → s deploy → smoke。（migrate 和 admin 由人工单独处理）
+#   load_env → build → s deploy → smoke。
 #
 # 触发：push to deploy / workflow_dispatch（手动）
 # Runner：GitHub 托管 ubuntu-latest
@@ -18,6 +18,7 @@ name: Deploy (CD)
 on:
   push:
     branches: [deploy]
+  workflow_dispatch:
 
 concurrency:
   group: deploy-docbase
@@ -106,8 +107,6 @@ jobs:
 
       # ---------- (3) 构建 + 发布到 FC + smoke ----------
       - name: Build + deploy to FC + smoke
-        env:
-          DOCBASE_RUN_PREFLIGHT: '0'
         run: |
           set -euo pipefail
           echo "=== fc-deploy/prod.env what s sees (redacted) ==="
@@ -116,20 +115,3 @@ jobs:
             -e 's#^(DATABASE_URL|REDIS_URL|MIGRATE_DATABASE_URL|BETTER_AUTH_SECRET)(.*://)([^:]+):([^@]+)@(.*)#\1\2\3:****@\5#' \
             fc-deploy/prod.env
           bash scripts/deploy-fc.sh apply
-
-      # ---------- (4) 通知 ----------
-      - name: Notify success
-        if: success()
-        run: bash scripts/notify.sh success
-        env:
-          DOCBASE_DOMAIN: ${{ env.DOCBASE_DOMAIN }}
-          GITHUB_REPO: ${{ github.repository }}
-          GITHUB_RUN_ID: ${{ github.run_id }}
-
-      - name: Notify failure
-        if: failure()
-        run: bash scripts/notify.sh failure || true
-        env:
-          DOCBASE_DOMAIN: ${{ env.DOCBASE_DOMAIN }}
-          GITHUB_REPO: ${{ github.repository }}
-          GITHUB_RUN_ID: ${{ github.run_id }}

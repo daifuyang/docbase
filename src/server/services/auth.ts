@@ -90,68 +90,6 @@ export async function signInService(input: SignInInput): Promise<{
   }
 }
 
-export async function signUpService(input: SignUpInput): Promise<{
-  user: PublicUser
-  session: { token: string; expiresAt: string }
-}> {
-  const headers = new Headers()
-  const ip = getClientIp(headers)
-  const rl = await rateLimit('auth:register', ip, 5, 60)
-  if (!rl.allowed) throw Errors.rateLimited(rl.resetAt)
-
-  const existingUsername = await db.query.user.findFirst({
-    where: eq(schema.user.username, input.username),
-  })
-  if (existingUsername) throw Errors.usernameTaken()
-
-  let result: { user: { id: string; email: string }; token: string }
-  try {
-    result = (await auth.api.signUpEmail({
-      body: {
-        email: input.email,
-        password: input.password,
-        name: input.displayName ?? input.username,
-        username: input.username,
-        displayName: input.displayName ?? input.username,
-      },
-      headers,
-      asResponse: false,
-    })) as { user: { id: string; email: string }; token: string }
-  } catch (e: unknown) {
-    const msg = (e as Error).message ?? ''
-    if (msg.includes('exists') || msg.includes('already')) {
-      throw Errors.emailTaken()
-    }
-    throw Errors.internal('注册失败，请稍后再试')
-  }
-
-  await db
-    .update(schema.user)
-    .set({
-      username: input.username,
-      displayName: input.displayName ?? input.username,
-    })
-    .where(eq(schema.user.id, result.user.id))
-
-  const me = await db.query.user.findFirst({ where: eq(schema.user.id, result.user.id) })
-  if (!me) throw Errors.internal('注册成功但读取用户失败')
-
-  return {
-    user: {
-      id: me.id,
-      username: me.username,
-      displayName: me.displayName,
-      bio: me.bio,
-      role: me.role,
-      createdAt: me.createdAt.toISOString(),
-    } satisfies PublicUser,
-    session: {
-      token: result.token,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-  }
-}
-
 export async function signOutService(_ctx: ServiceContext): Promise<{ ok: true }> {
   try {
     await auth.api.signOut({ headers: _ctx.headers })

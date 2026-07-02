@@ -130,7 +130,7 @@ DOCBASE_SKIP_BUILD=1 pnpm deploy
 完整 release 可显式打开发布前步骤：
 
 ```bash
-DOCBASE_RUN_PREFLIGHT=1 DOCBASE_RUN_MIGRATIONS=1 DOCBASE_RUN_ADMIN_ENSURE=1 pnpm deploy
+pnpm deploy
 ```
 
 ## 必填环境变量

@@ -24,8 +24,6 @@ export async function listDocumentsService(
   return queryDocuments(input)
 }
 
-export const searchDocumentsService = listDocumentsService
-
 export async function listMyDocumentsService(
   ctx: ServiceContext,
   rawInput: unknown,
@@ -146,22 +144,6 @@ export async function deleteDocumentService(
   await db.delete(schema.document).where(eq(schema.document.id, input.id))
   await redis.del(withPrefix('cache:documents:list:*')).catch(() => {})
   return { ok: true }
-}
-
-/**
- * Resolve a document slug to its DB id (uuid).
- * Used by CLI commands that take a slug but need to call update/delete
- * (which operate on the uuid `id`).
- */
-export async function getDocumentIdBySlugService(
-  _ctx: ServiceContext,
-  input: { slug: string },
-): Promise<{ id: string; authorId: string; status: 'draft' | 'published' } | null> {
-  const row = await db.query.document.findFirst({
-    where: eq(schema.document.slug, input.slug),
-    columns: { id: true, authorId: true, status: true },
-  })
-  return row ?? null
 }
 
 /**

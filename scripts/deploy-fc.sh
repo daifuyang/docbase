@@ -3,7 +3,7 @@
 # DocBase FC deploy wrapper.
 #
 # Canonical function-code deployment flow:
-#   optional preflight/migrate/admin ensure -> build -> s deploy -f fc-deploy/s.yaml
+#   build -> s deploy -f fc-deploy/s.yaml
 #
 # Environment is read from DOCBASE_FC_ENV_FILE, defaulting to fc-deploy/prod.env.
 # Set DOCBASE_SKIP_BUILD=1 when deploying an already-built fc-deploy/code package.
@@ -59,7 +59,7 @@ s_args() {
 redact() {
   sed -E \
     -e 's/\x1B\[[0-9;]*[A-Za-z]//g' \
-    -e 's#^([[:space:]]*)(BETTER_AUTH_SECRET|DATABASE_URL|MIGRATE_DATABASE_URL|REDIS_URL|DOCBASE_ADMIN_PASSWORD|ALIYUN_AK|ALIYUN_SK):.*#\1\2: ***REDACTED***#g'
+    -e 's#^([[:space:]]*)(BETTER_AUTH_SECRET|DATABASE_URL|MIGRATE_DATABASE_URL|REDIS_URL|ALIYUN_AK|ALIYUN_SK):.*#\1\2: ***REDACTED***#g'
 }
 
 run_s() {
@@ -109,30 +109,6 @@ check_package() {
   fi
 }
 
-preflight() {
-  log "production preflight"
-  (cd "$ROOT" && pnpm exec tsx scripts/preflight-prod.mts)
-}
-
-migrate_database() {
-  log "database migrate"
-  (cd "$ROOT" && bash scripts/migrate-prod.sh)
-}
-
-optional_release_steps() {
-  if [ "${DOCBASE_RUN_PREFLIGHT:-0}" = "1" ]; then
-    preflight
-  else
-    log "skip production preflight; set DOCBASE_RUN_PREFLIGHT=1 to enable"
-  fi
-
-  if [ "${DOCBASE_RUN_MIGRATIONS:-0}" = "1" ]; then
-    migrate_database
-  else
-    log "skip database migrate; set DOCBASE_RUN_MIGRATIONS=1 to enable"
-  fi
-}
-
 smoke_test() {
   local base_url="${DOCBASE_SMOKE_URL:-${PUBLIC_APP_URL:-}}"
   if [ -z "$base_url" ]; then
@@ -157,7 +133,6 @@ case "$CMD" in
     load_env
     require_env VPC_ID VSWITCH_ID SECURITY_GROUP_ID DATABASE_URL REDIS_URL \
       BETTER_AUTH_SECRET BETTER_AUTH_URL PUBLIC_APP_URL
-    optional_release_steps
     build_package
     log "deploy fc-deploy/s.yaml"
     run_s deploy -y
@@ -184,20 +159,6 @@ case "$CMD" in
     require_env PUBLIC_APP_URL
     smoke_test
     ;;
-  preflight)
-    load_env
-    require_env DATABASE_URL REDIS_URL
-    preflight
-    ;;
-  migrate)
-    load_env
-    migrate_database
-    ;;
-  admin)
-    load_env
-    require_env DATABASE_URL DOCBASE_ADMIN_EMAIL DOCBASE_ADMIN_USERNAME DOCBASE_ADMIN_PASSWORD
-    ensure_admin
-    ;;
   package|build)
     load_env
     build_package
@@ -214,14 +175,11 @@ case "$CMD" in
     ;;
   *)
     cat >&2 <<'EOF'
-usage: scripts/deploy-fc.sh {apply|plan|info|rollback|smoke|preflight|migrate|admin|package|check|local}
+usage: scripts/deploy-fc.sh {apply|plan|info|rollback|smoke|package|check|local}
 
 env:
   DOCBASE_FC_ENV_FILE       defaults to fc-deploy/prod.env
   DOCBASE_SKIP_BUILD        set to 1 to deploy an existing fc-deploy/code package
-  DOCBASE_RUN_PREFLIGHT     set to 1 to run production DB/Redis checks before deploy
-  DOCBASE_RUN_MIGRATIONS    set to 1 to run migrations before deploy
-  DOCBASE_RUN_ADMIN_ENSURE  set to 1 to ensure the production admin before deploy
   DOCBASE_SMOKE_URL         override PUBLIC_APP_URL for smoke tests
 EOF
     exit 1
