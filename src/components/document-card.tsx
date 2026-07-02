@@ -48,6 +48,15 @@ export function DocumentCard({ document, variant = 'default' }: Props) {
             {document.creator.displayName ?? document.creator.username}
           </span>
           <time dateTime={document.updatedAt}>{formatDate(document.updatedAt)}</time>
+          <span
+            className={
+              document.status === 'draft'
+                ? 'rounded-md bg-yellow-100 px-1.5 py-0.5 text-yellow-800 dark:bg-yellow-950/40 dark:text-yellow-200'
+                : 'rounded-md bg-accent px-1.5 py-0.5 text-accent-foreground'
+            }
+          >
+            {document.status === 'draft' ? '草稿' : '已发布'}
+          </span>
           {document.space && (
             <span className="inline-flex items-center gap-1">
               <FolderOpen className="h-3.5 w-3.5" />

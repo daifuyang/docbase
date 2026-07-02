@@ -1,6 +1,5 @@
-import { Link } from '@tanstack/react-router'
-import { useRouter } from '@tanstack/react-router'
-import { ChevronDown, LogOut, Menu, ShieldCheck } from 'lucide-react'
+import { Link, useRouter } from '@tanstack/react-router'
+import { ChevronDown, KeyRound, LogOut, Menu, ShieldCheck } from 'lucide-react'
 import { useTransition } from 'react'
 import { SearchDialog } from '~/components/search-dialog'
 import { SidebarContent } from '~/components/sidebar'
@@ -28,15 +27,15 @@ type SidebarTag = { name: string; slug: string }
 type SidebarSpace = Parameters<typeof SidebarContent>[0]['spaces']
 type SidebarExpandedKeys = Parameters<typeof SidebarContent>[0]['expandedKeys']
 
-export function Nav() {
+type NavProps = {
+  me: Exclude<Me, null>
+  tags?: SidebarTag[]
+  spaces?: SidebarSpace
+  expandedKeys?: SidebarExpandedKeys
+}
+
+export function Nav({ me, tags = [], spaces = [], expandedKeys = [] }: NavProps) {
   const router = useRouter()
-  const data = router.state.matches.find((m) => m.routeId === '__root__')?.loaderData as
-    | { me: Me; tags?: SidebarTag[]; spaces?: SidebarSpace; expandedKeys?: SidebarExpandedKeys }
-    | undefined
-  const me = data?.me ?? null
-  const tags = data?.tags ?? []
-  const spaces = data?.spaces ?? []
-  const expandedKeys = data?.expandedKeys ?? []
 
   const [pending, startTransition] = useTransition()
 
@@ -111,6 +110,13 @@ export function Nav() {
                     @{me.username}
                   </div>
                 </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/settings/tokens">
+                    <KeyRound className="h-4 w-4" />
+                    访问令牌
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {me.role === 'admin' && (
                   <>

@@ -8,13 +8,9 @@ import {
   useRouterState,
 } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
-import { Nav } from '~/components/nav'
-import { Sidebar } from '~/components/sidebar'
+import { useEffect, useState } from 'react'
 import { queryClient } from '~/router'
-import { getCurrentUser } from '~/server/auth'
-import { getInstallState } from '~/server/install'
-import { getNavigationTree } from '~/server/spaces'
-import { listTags } from '~/server/tags'
+import { getInstallGuardState } from '~/server/install'
 import '~/styles/globals.css'
 
 export const Route = createRootRoute({
@@ -28,38 +24,13 @@ export const Route = createRootRoute({
     links: [{ rel: 'icon', href: '/favicon.ico' }],
   }),
   beforeLoad: async ({ location }) => {
-    const installState = await getInstallState()
-    const publicPaths = ['/install', '/swagger', '/api/health']
-    if (installState.status !== 'ready' && !publicPaths.includes(location.pathname)) {
+    const installState = await getInstallGuardState()
+    const publicPrefixes = ['/install', '/swagger', '/api/health', '/api/install/']
+    const isPublicPath = publicPrefixes.some(
+      (path) => location.pathname === path || location.pathname.startsWith(path),
+    )
+    if (installState.status !== 'ready' && !isPublicPath) {
       throw redirect({ to: '/install' })
-    }
-  },
-  loader: async () => {
-    const installState = await getInstallState()
-    if (installState.status !== 'ready') {
-      return {
-        installState,
-        me: null,
-        tags: [],
-        spaces: [],
-        expandedKeys: [],
-      }
-    }
-    // getCurrentUser() returns null for anonymous requests (see
-    // getCurrentUserService). Child routes decide whether to redirect
-    // (e.g. index.tsx → /auth/login). Don't throw here — otherwise the
-    // error boundary would intercept before the child route's
-    // beforeLoad redirect can run.
-    const me = await getCurrentUser()
-    const [tags, navigation] = me
-      ? await Promise.all([listTags({ data: { limit: 12 } }), getNavigationTree()])
-      : [{ items: [] }, { items: [], expandedKeys: [] }]
-    return {
-      installState,
-      me,
-      tags: tags.items,
-      spaces: navigation.items,
-      expandedKeys: navigation.expandedKeys,
     }
   },
   component: RootComponent,
@@ -68,35 +39,36 @@ export const Route = createRootRoute({
 })
 
 function RootComponent() {
-  const pathname = useRouterState({ select: (state) => state.location.pathname })
-  const isAuthRoute = pathname.startsWith('/auth/')
-  const isInstallRoute = pathname === '/install'
-  const data = Route.useLoaderData()
-
   return (
     <RootDocument>
       <QueryClientProvider client={queryClient}>
-        {isAuthRoute || isInstallRoute ? (
-          <Outlet />
-        ) : (
-          <div className="min-h-screen bg-background">
-            <Nav />
-            <div className="mx-auto flex min-h-[calc(100vh-3.5rem)] w-full max-w-[1920px]">
-              <Sidebar
-                popularTags={data.tags}
-                spaces={data.spaces}
-                expandedKeys={data.expandedKeys}
-                className="hidden border-r border-border bg-surface/70 lg:block xl:w-72"
-                contentClassName="sticky top-20 p-4 xl:p-5"
-              />
-              <main className="min-w-0 flex-1">
-                <Outlet />
-              </main>
-            </div>
-          </div>
-        )}
+        <RouteProgress />
+        <Outlet />
       </QueryClientProvider>
     </RootDocument>
+  )
+}
+
+function RouteProgress() {
+  const isPending = useRouterState({ select: (state) => state.status === 'pending' })
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    if (!isPending) {
+      setVisible(false)
+      return
+    }
+    const timer = window.setTimeout(() => setVisible(true), 120)
+    return () => window.clearTimeout(timer)
+  }, [isPending])
+
+  return (
+    <div
+      className={`route-progress fixed left-0 top-0 z-50 h-0.5 w-full bg-primary shadow-[0_0_12px_rgba(22,119,255,0.55)] ${
+        visible ? 'opacity-100' : 'opacity-0'
+      }`}
+      aria-hidden="true"
+    />
   )
 }
 

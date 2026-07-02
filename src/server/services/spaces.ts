@@ -170,12 +170,18 @@ export async function createSpaceService(
   input: { name: string; description?: string },
 ): Promise<{ space: SpaceSummary }> {
   const admin = await requireAdmin(ctx)
+  const [lastSpace] = await db
+    .select({ sortOrder: schema.space.sortOrder })
+    .from(schema.space)
+    .orderBy(desc(schema.space.sortOrder))
+    .limit(1)
   const [row] = await db
     .insert(schema.space)
     .values({
       name: input.name,
       slug: slugify(input.name),
       description: input.description ?? null,
+      sortOrder: (lastSpace?.sortOrder ?? 0) + 10,
       createdBy: admin.id,
     })
     .returning()
@@ -191,6 +197,12 @@ export async function createCategoryService(
   input: { spaceId: string; name: string; description?: string },
 ): Promise<{ category: CategorySummary }> {
   await requireAdmin(ctx)
+  const [lastCategory] = await db
+    .select({ sortOrder: schema.category.sortOrder })
+    .from(schema.category)
+    .where(eq(schema.category.spaceId, input.spaceId))
+    .orderBy(desc(schema.category.sortOrder))
+    .limit(1)
   const [row] = await db
     .insert(schema.category)
     .values({
@@ -198,6 +210,7 @@ export async function createCategoryService(
       name: input.name,
       slug: slugify(input.name),
       description: input.description ?? null,
+      sortOrder: (lastCategory?.sortOrder ?? 0) + 10,
     })
     .returning()
   if (!row) throw Errors.internal('分类创建失败')

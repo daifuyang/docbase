@@ -12,6 +12,17 @@ const configSchema = z.object({
 })
 
 export type RuntimeConfig = z.infer<typeof configSchema>
+export type DeployMode = 'development' | 'self-hosted' | 'fc'
+
+export function getDeployMode(): DeployMode {
+  const mode = process.env.DOCBASE_DEPLOY_MODE
+  if (mode === 'fc' || mode === 'self-hosted' || mode === 'development') return mode
+  return process.env.NODE_ENV === 'development' ? 'development' : 'self-hosted'
+}
+
+export function isFcDeployMode(): boolean {
+  return getDeployMode() === 'fc'
+}
 
 export function getConfigDir(): string {
   return process.env.DOCBASE_CONFIG_DIR ?? join(process.cwd(), 'config')
@@ -48,8 +59,17 @@ export function readEnvRuntimeConfig(): RuntimeConfig | null {
 }
 
 export function loadRuntimeConfig(): RuntimeConfig | null {
-  const config = readRuntimeConfig() ?? readEnvRuntimeConfig()
+  const fileConfig = readRuntimeConfig()
+  const config = fileConfig ?? readEnvRuntimeConfig()
   if (!config) return null
+  if (fileConfig) {
+    process.env.DATABASE_URL = config.databaseUrl
+    process.env.REDIS_URL = config.redisUrl
+    process.env.BETTER_AUTH_SECRET = config.betterAuthSecret
+    process.env.BETTER_AUTH_URL = config.betterAuthUrl
+    process.env.PUBLIC_APP_URL = config.publicAppUrl
+    return config
+  }
   process.env.DATABASE_URL ??= config.databaseUrl
   process.env.REDIS_URL ??= config.redisUrl
   process.env.BETTER_AUTH_SECRET ??= config.betterAuthSecret

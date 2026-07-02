@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { createDocumentSchema, updateDocumentSchema } from '~/shared/validation/document'
+import {
+  createDocumentSchema,
+  searchDocumentsSchema,
+  updateDocumentSchema,
+} from '~/shared/validation/document'
 
 const doc = { type: 'doc' as const, content: [{ type: 'paragraph' }] }
 const uuid = '00000000-0000-4000-8000-000000000001'
@@ -33,5 +37,10 @@ describe('document validation', () => {
   it('requires at least one field for updates', () => {
     const result = updateDocumentSchema.safeParse({ id: uuid })
     expect(result.success).toBe(false)
+  })
+
+  it('preserves status filters when searching documents', () => {
+    const result = searchDocumentsSchema.parse({ status: 'draft', page: 1, pageSize: 5 })
+    expect(result.status).toBe('draft')
   })
 })

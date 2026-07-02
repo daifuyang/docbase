@@ -1,34 +1,32 @@
 #!/usr/bin/env node
 /**
- * Build the FC deployable artifact under `fc-deploy/`.
+ * Build the FC deployable runtime artifact under `fc-deploy/code/`.
  *
- * 输出结构（与 fc-deploy/s.yaml 的 `code: .` 对应）：
- *   fc-deploy/
+ * 输出结构（与 fc-deploy/s.yaml 的 `code: ./code` 对应）：
+ *   fc-deploy/code/
  *     bootstrap             ← bash launcher (chmod +x)，FC custom.debian12 入口
- *     fc-server.mjs         ← http server wrapping tanstack fetch
- *     dist/                 ← TanStack Start build output (server.js + assets/)
+ *     .output/              ← TanStack Start + Nitro production output
  *     db/migrations/        ← Drizzle migrations
- *     package.json          ← { type: module, dependencies merged }
- *     node_modules/         ← pnpm install --prod (--ignore-scripts)
+ *     package.json          ← minimal metadata / start script
  *
- * 注意：bootstrap / fc-server.mjs 放在 fc-deploy/ 根（与历史 .fc-code/ 布局
- * 一致），因为 bootstrap 里写死 `cd /code; node fc-server.mjs`。
+ * 注意：FC 会把 s.yaml 的 `code: ./code` 挂载为 `/code`，
+ * 所以 bootstrap 必须位于 fc-deploy/code/bootstrap。
  *
  * fc-deploy/ 顶层由用户手维护的文件（s.yaml / .env.example / .gitignore /
- * README.md）不会被本脚本删除——只重建构建产物。
+ * README.md / prod.env）不会被本脚本删除，也不会被上传到 FC。
  *
  * 调用：
- *   pnpm build:fc                # 仅生成 fc-deploy/
+ *   pnpm build:fc                # 仅生成 fc-deploy/code/
  *   pnpm build:fc:local          # = pnpm build && node scripts/build-fc.mjs
  */
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { spawn } from 'node:child_process'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
-const OUT = path.join(ROOT, 'fc-deploy')
+const DEPLOY_DIR = path.join(ROOT, 'fc-deploy')
+const OUT = path.join(DEPLOY_DIR, 'code')
 
 function clean(s) {
   return s.replace(/\x1b\[[0-9;]*m/g, '')
@@ -44,31 +42,54 @@ async function cpDir(src, dst) {
   await ensureDir(dst)
   await fs.cp(src, dst, { recursive: true })
 }
+async function assertFile(p, label) {
+  const stat = await fs.stat(p).catch(() => null)
+  if (!stat?.isFile()) {
+    throw new Error(`${label} not found: ${path.relative(ROOT, p)}`)
+  }
+}
+async function assertDir(p, label) {
+  const stat = await fs.stat(p).catch(() => null)
+  if (!stat?.isDirectory()) {
+    throw new Error(`${label} not found: ${path.relative(ROOT, p)}`)
+  }
+}
 
-// 仅清掉构建产物（保留 s.yaml / server-bootstrap / .env.example / README.md 等手维护文件）
+// 仅清掉运行时代码包；fc-deploy/ 顶层的配置、文档和本地凭证不会进入 FC 代码包。
 async function cleanBuildArtifacts() {
-  for (const sub of ['dist', 'db', 'node_modules', 'package.json', 'pnpm-lock.yaml', 'bootstrap', 'fc-server.mjs']) {
-    await rmrf(path.join(OUT, sub))
+  await rmrf(OUT)
+  for (const sub of [
+    '.code',
+    '.output',
+    'dist',
+    'db',
+    'node_modules',
+    'package.json',
+    'pnpm-lock.yaml',
+    'bootstrap',
+    'fc-server.mjs',
+  ]) {
+    await rmrf(path.join(DEPLOY_DIR, sub))
   }
 }
 
 async function main() {
-  console.log('▶ build:fc — assembling fc-deploy/')
+  console.log('▶ build:fc — assembling fc-deploy/code/')
 
-  await ensureDir(OUT)
   await cleanBuildArtifacts()
+  await ensureDir(OUT)
 
-  // 1) dist/ → fc-deploy/dist/
-  const distSrc = path.join(ROOT, 'dist')
+  // 1) .output/ → fc-deploy/code/.output/
+  const outputSrc = path.join(ROOT, '.output')
   try {
-    await cpDir(distSrc, path.join(OUT, 'dist'))
-    console.log('  ✓ dist/ copied')
+    await cpDir(outputSrc, path.join(OUT, '.output'))
+    console.log('  ✓ .output/ copied')
   } catch (e) {
-    console.error('✗ dist/ not found — run `pnpm build` first')
+    console.error('✗ .output/ not found — run `pnpm build` first')
     process.exit(1)
   }
 
-  // 2) db/migrations/ → fc-deploy/db/migrations/
+  // 2) db/migrations/ → fc-deploy/code/db/migrations/
   const migrationsSrc = path.join(ROOT, 'db', 'migrations')
   try {
     await cpDir(migrationsSrc, path.join(OUT, 'db', 'migrations'))
@@ -78,76 +99,49 @@ async function main() {
     process.exit(1)
   }
 
-  // 3) fc-server.mjs (从仓库根 server/ 复制到 fc-deploy/ 根)
-  const serverSrc = await fs.readFile(path.join(ROOT, 'server', 'fc-server.mjs'), 'utf8')
-  await fs.writeFile(path.join(OUT, 'fc-server.mjs'), clean(serverSrc))
-  console.log('  ✓ fc-server.mjs copied')
-
-  // 4) bootstrap (FC custom.debian12 入口，chmod +x)
+  // 3) bootstrap (FC custom.debian12 入口，chmod +x)
   const bootstrapSrc = await fs.readFile(path.join(ROOT, 'server', 'bootstrap'), 'utf8')
   await fs.writeFile(path.join(OUT, 'bootstrap'), clean(bootstrapSrc))
   await fs.chmod(path.join(OUT, 'bootstrap'), 0o755)
   console.log('  ✓ bootstrap copied (+x)')
 
-  // 5) package.json（production deps + vite 外部化的少量 devDeps）
-  // fc-server.mjs 只 import http/stream/./dist/server/server.js；dist/server/
-  // 的 vite bundle 把 react/@tanstack/*/drizzle/ioredis/postgres/sanitize-html
-  // 等运行时依赖设为 external——这些全部来自 root 的 dependencies。
-  //
-  // 但 vite 也会把一部分 devDeps 外部化（dist 里的 from 'dotenv' / from
-  // '@hookform/resolvers/zod' 等），需要在 fc-deploy 这边补上。其余 devDeps
-  // （biome / playwright / vitest / husky / tailwindcss / vite / ...）FC 上用不到，
-  // 不合并进来。
+  // 4) package.json — Nitro noExternals bundles runtime code into .output/server.
+  // Keep only minimal metadata so local tooling still has a clear start command.
   const repoPkg = JSON.parse(
     await fs.readFile(path.join(ROOT, 'package.json'), 'utf8'),
   )
-  // 这些包在 root devDeps 里，但被 vite 外部化后 dist bundle 运行时需要
-  const runtimeOnlyDevDeps = ['@hookform/resolvers', 'dotenv']
-  for (const name of runtimeOnlyDevDeps) {
-    if (!repoPkg.devDependencies?.[name]) {
-      throw new Error(
-        `build-fc: runtime-only devDep "${name}" not found in root devDependencies; ` +
-          `either add it back to package.json or remove it from the runtimeOnlyDevDeps list`,
-      )
-    }
-  }
   const fcPkg = {
     name: 'docbase-fc-deploy',
     version: repoPkg.version,
     private: true,
     type: 'module',
     engines: { node: '>=20' },
-    dependencies: {
-      ...repoPkg.dependencies,
-      ...Object.fromEntries(runtimeOnlyDevDeps.map((k) => [k, repoPkg.devDependencies[k]])),
+    scripts: {
+      start: 'node .output/server/index.mjs',
     },
   }
   await fs.writeFile(path.join(OUT, 'package.json'), JSON.stringify(fcPkg, null, 2))
-  console.log('  ✓ package.json copied (with all prod deps)')
+  console.log('  ✓ package.json written (Nitro bundled runtime)')
 
-  // 6) node_modules — 必须 --ignore-scripts（避免 husky postinstall），
-  //    必须 --no-frozen-lockfile（合成 package.json 与 repo 的 lockfile 不一致）。
-  console.log('  ⏳ pnpm install --prod (populating fc-deploy/node_modules)')
-  await new Promise((resolve, reject) => {
-    const child = spawn(
-      'pnpm',
-      [
-        'install',
-        '--prod',
-        '--ignore-scripts',
-        '--no-frozen-lockfile',
-        '--ignore-workspace',
-      ],
-      { cwd: OUT, stdio: 'inherit', env: { ...process.env, CI: '1' } },
-    )
-    child.on('exit', (code) =>
-      code === 0 ? resolve() : reject(new Error('pnpm install exited ' + code)),
-    )
-  })
-  console.log('  ✓ node_modules ready')
+  await assertFile(path.join(OUT, 'bootstrap'), 'FC bootstrap')
+  await assertFile(path.join(OUT, '.output', 'server', 'index.mjs'), 'TanStack Start server entry')
+  await assertDir(path.join(OUT, '.output', 'public'), 'TanStack Start public assets')
+  await assertDir(path.join(OUT, 'db', 'migrations'), 'Drizzle migrations')
+
+  const manifest = {
+    app: 'docbase',
+    target: 'aliyun-fc-custom-runtime',
+    framework: 'tanstack-start',
+    generatedAt: new Date().toISOString(),
+    entry: '.output/server/index.mjs',
+    port: 9000,
+    node: process.version,
+  }
+  await fs.writeFile(path.join(OUT, 'fc-manifest.json'), JSON.stringify(manifest, null, 2))
+  console.log('  ✓ deploy artifact verified')
 
   console.log('')
-  console.log('✅ fc-deploy/ ready for `s local start`')
+  console.log('✅ fc-deploy/code/ ready for `s local start`')
   console.log('   next: cd fc-deploy && s local start --env-file .env')
 }
 

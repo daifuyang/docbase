@@ -10,7 +10,7 @@ export const tiptapDocSchema = z
     message: '正文大小超过 200KB',
   })
 
-export const titleSchema = z.string().min(1, '请输入标题').max(200, '标题最多 200 个字符')
+export const titleSchema = z.string().min(1, '请输入标题').max(50, '标题最多 50 个字符')
 
 export const tagNameSchema = z
   .string()
@@ -61,9 +61,35 @@ export const searchDocumentsSchema = z.object({
   spaceSlug: z.string().optional(),
   categorySlug: z.string().optional(),
   tagSlug: z.string().optional(),
+  status: documentStatusSchema.optional(),
   page: z.number().int().min(1).default(1),
   pageSize: z.number().int().min(1).max(50).default(20),
 })
+
+/**
+ * Accepts http(s)://, mailto:, tel:, or /-prefixed relative paths.
+ * `example.com` alone is NOT accepted here — the link modal runs it
+ * through `normalizeLinkUrl` first to prepend `https://` before validation.
+ */
+function isAcceptableLinkUrl(v: string): boolean {
+  if (v.startsWith('/')) return /^\/[\w\-./?#=&%~+]*$/.test(v)
+  try {
+    const u = new URL(v)
+    return ['http:', 'https:', 'mailto:', 'tel:'].includes(u.protocol)
+  } catch {
+    return false
+  }
+}
+
+export const linkUrlSchema = z
+  .string()
+  .trim()
+  .min(1, '请输入链接地址')
+  .max(2048, '链接过长')
+  .refine(
+    isAcceptableLinkUrl,
+    '链接格式不正确（http(s)://、mailto:、tel:、或以 / 开头的相对路径）',
+  )
 
 export type CreateDocumentInput = z.infer<typeof createDocumentSchema>
 export type UpdateDocumentInput = z.infer<typeof updateDocumentSchema>

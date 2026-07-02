@@ -6,11 +6,11 @@
 #
 # 线上 / 本地切换完全通过环境变量：
 #   - ${env(VPC_ID)} 等线上用真凭证，本地用 placeholder（fc3 local 不连 FC API）
-#   - 本地：cp .env.example .env && s local start --env-file .env
-#   - 线上：s deploy --env-file <prod.env>
+#   - 本地：cp .env.example .env && pnpm deploy:local
+#   - 线上：pnpm deploy 或 DOCBASE_FC_ENV_FILE=/path/to/prod.env pnpm deploy
 #
-# fc-deploy/ 的内容由 scripts/build-fc.mjs 重新生成；s.yaml / .env.example /
-# .gitignore / README.md 手维护提交 git，dist/ node_modules/ db/ 由 .gitignore 排除。
+# scripts/build-fc.mjs 只生成 fc-deploy/code/；FC 只上传 code/。
+# s.yaml / .env.example / README.md / prod.env 等部署侧文件不会进入函数代码包。
 # =============================================================================
 edition: 3.0.0
 name: docbase-fc-deploy
@@ -30,7 +30,7 @@ resources:
       functionName: ${vars.functionName}
       description: DocBase enterprise knowledge base (TanStack Start on FC, fc-deploy/)
       runtime: custom.debian12
-      code: .                            # fc-deploy/ 自身即 code 根
+      code: ./code                       # 只上传真实运行时代码包，不上传部署侧文件
       handler: not-used                  # custom runtime 时 FC 不使用 handler
       timeout: 60
       memorySize: 1024
@@ -39,7 +39,7 @@ resources:
       instanceConcurrency: 100
       internetAccess: true
       customRuntimeConfig:
-        # 线上：FC 把 fc-deploy/ 整体 mount 到 /code，bootstrap 在 /code/ 根
+        # 线上：FC 把 fc-deploy/code/ mount 到 /code，bootstrap 在 /code/ 根
         command:
           - /code/bootstrap
         port: 9000
@@ -78,6 +78,7 @@ resources:
         #   - src/server/services/install.ts 的 assertInstallAllowed 会拒绝一切
         #     写操作（防止已部署的实例被再次"重新安装"）
         # 默认 'true'；本地 s local start 时可在 .env 里设 'false' 走安装向导。
+        DOCBASE_DEPLOY_MODE: fc
         DOCBASE_INSTALLED: 'true'
         DATABASE_URL: ${env(DATABASE_URL)}
         REDIS_URL: ${env(REDIS_URL)}

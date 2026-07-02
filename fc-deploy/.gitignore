@@ -1,5 +1,8 @@
 # 部署时由 scripts/build-fc.mjs 生成，不入库
+.code/
+code/
 dist/
+.output/
 node_modules/
 db/
 package.json
@@ -10,3 +13,5 @@ fc-server.mjs
 # 本地 s local start 用的真实凭证
 .env
 fc.env
+prod.env
+*.env.local

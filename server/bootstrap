@@ -1,34 +1,9 @@
 #!/usr/bin/env bash
-# =============================================================================
-# DocBase — FC custom.debian12 runtime 入口
-# 在 s.yaml 的 customRuntimeConfig.command 中被调用 (/code/bootstrap)
-# 仅做一件事：把 cwd 切到 /code，再用 fc 内置的 node 启动 fc-server.mjs
-#
-# custom.debian12 基础镜像本身不带 nodejs（仅 python3.11），第一次冷启动时
-# 从 nodesource 安装 node22；后续冷启动由 FC 实例复用缓存。
-# =============================================================================
 set -euo pipefail
 
 cd /code
 
-# custom.debian12 默认没 nodejs；apt-get 用 DEBIAN_FRONTEND=noninteractive 跳过 debconf
-export DEBIAN_FRONTEND=noninteractive
+export NODE_ENV="${NODE_ENV:-production}"
+export PORT="${PORT:-9000}"
 
-NODE_BIN="/var/fc/lang/nodejs22/bin/node"
-if [ ! -x "$NODE_BIN" ]; then
-  echo "[docbase] node22 not found at $NODE_BIN, installing from nodesource"
-  apt-get update -qq
-  apt-get install -y -qq --no-install-recommends ca-certificates curl gnupg
-  install -m 0755 -d /etc/apt/keyrings
-  curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
-    | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
-  echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" \
-    > /etc/apt/sources.list.d/nodesource.list
-  apt-get update -qq
-  apt-get install -y -qq --no-install-recommends nodejs
-  mkdir -p /var/fc/lang/nodejs22/bin
-  ln -sf "$(command -v node)" /var/fc/lang/nodejs22/bin/node
-  echo "[docbase] node22 installed: $(node --version)"
-fi
-
-exec "$NODE_BIN" fc-server.mjs
+exec node .output/server/index.mjs

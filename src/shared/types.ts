@@ -48,6 +48,7 @@ export type DocumentSummary = {
   title: string
   slug: string
   excerpt: string | null
+  status: 'draft' | 'published'
   creator: Pick<PublicUser, 'id' | 'username' | 'displayName'>
   author: Pick<PublicUser, 'id' | 'username' | 'displayName'>
   space: SpaceSummary | null

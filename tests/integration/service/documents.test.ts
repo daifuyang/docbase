@@ -10,6 +10,7 @@ import {
   deleteDocumentService,
   getDocumentBySlugService,
   listDocumentsService,
+  listMyDocumentsService,
   updateDocumentService,
 } from '~/server/services/documents'
 
@@ -23,6 +24,7 @@ const ctx = contextForUser('svc_test_user')
 describe('documents service layer', () => {
   let spaceId: string
   let createdDocId: string
+  let publishedDocId: string
 
   beforeAll(async () => {
     // Use the seeded admin user so we have a real `user` row.
@@ -40,6 +42,9 @@ describe('documents service layer', () => {
   afterAll(async () => {
     if (createdDocId) {
       await db.delete(schema.document).where(eq(schema.document.id, createdDocId))
+    }
+    if (publishedDocId) {
+      await db.delete(schema.document).where(eq(schema.document.id, publishedDocId))
     }
   })
 
@@ -74,6 +79,21 @@ describe('documents service layer', () => {
     const page = await listDocumentsService(ctx, {})
     expect(Array.isArray(page.items)).toBe(true)
     expect(page.page).toBe(1)
+  })
+
+  it('listMyDocumentsService only returns drafts when filtering drafts', async () => {
+    const { document } = await createDocumentService(ctx, {
+      title: 'Service layer published doc',
+      contentJson: TIPTAP,
+      tags: ['svc-test'],
+      status: 'published',
+      spaceId,
+    })
+    publishedDocId = document.id
+
+    const page = await listMyDocumentsService(ctx, { status: 'draft', page: 1, pageSize: 50 })
+    expect(page.items.every((item) => item.status === 'draft')).toBe(true)
+    expect(page.items.some((item) => item.id === publishedDocId)).toBe(false)
   })
 
   it('updateDocumentService changes the title', async () => {

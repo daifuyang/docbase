@@ -13,18 +13,27 @@ import { Route as SwaggerRouteImport } from './routes/swagger'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as InstallRouteImport } from './routes/install'
-import { Route as AdminRouteImport } from './routes/admin'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as TagsSlugRouteImport } from './routes/tags.$slug'
-import { Route as SpacesSlugRouteImport } from './routes/spaces.$slug'
-import { Route as DocumentsNewRouteImport } from './routes/documents.new'
-import { Route as DocumentsSlugRouteImport } from './routes/documents.$slug'
+import { Route as ProtectedRouteImport } from './routes/_protected'
+import { Route as ProtectedIndexRouteImport } from './routes/_protected.index'
 import { Route as AuthLoginRouteImport } from './routes/auth.login'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
-import { Route as DocumentsSlugEditRouteImport } from './routes/documents.$slug.edit'
+import { Route as ProtectedAdminRouteImport } from './routes/_protected.admin'
+import { Route as ApiV1TagsRouteImport } from './routes/api/v1/tags'
+import { Route as ApiV1SpacesRouteImport } from './routes/api/v1/spaces'
+import { Route as ApiV1OpenapiRouteImport } from './routes/api/v1/openapi'
+import { Route as ApiV1DocumentsRouteImport } from './routes/api/v1/documents'
+import { Route as ApiV1CategoriesRouteImport } from './routes/api/v1/categories'
 import { Route as ApiInstallStateRouteImport } from './routes/api/install.state'
 import { Route as ApiInstallRunRouteImport } from './routes/api/install.run'
 import { Route as ApiInstallConfigRouteImport } from './routes/api/install.config'
+import { Route as ProtectedTagsSlugRouteImport } from './routes/_protected.tags.$slug'
+import { Route as ProtectedSpacesSlugRouteImport } from './routes/_protected.spaces.$slug'
+import { Route as ProtectedSettingsTokensRouteImport } from './routes/_protected.settings.tokens'
+import { Route as ProtectedDocumentsNewRouteImport } from './routes/_protected.documents.new'
+import { Route as ProtectedDocumentsSlugRouteImport } from './routes/_protected.documents.$slug'
+import { Route as ApiV1SpacesTreeRouteImport } from './routes/api/v1/spaces.tree'
+import { Route as ApiV1DocumentsSlugRouteImport } from './routes/api/v1/documents.$slug'
+import { Route as ProtectedDocumentsSlugEditRouteImport } from './routes/_protected.documents.$slug.edit'
 
 const SwaggerRoute = SwaggerRouteImport.update({
   id: '/swagger',
@@ -46,35 +55,14 @@ const InstallRoute = InstallRouteImport.update({
   path: '/install',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminRoute = AdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
+const ProtectedRoute = ProtectedRouteImport.update({
+  id: '/_protected',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
+const ProtectedIndexRoute = ProtectedIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TagsSlugRoute = TagsSlugRouteImport.update({
-  id: '/tags/$slug',
-  path: '/tags/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SpacesSlugRoute = SpacesSlugRouteImport.update({
-  id: '/spaces/$slug',
-  path: '/spaces/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DocumentsNewRoute = DocumentsNewRouteImport.update({
-  id: '/documents/new',
-  path: '/documents/new',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DocumentsSlugRoute = DocumentsSlugRouteImport.update({
-  id: '/documents/$slug',
-  path: '/documents/$slug',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => ProtectedRoute,
 } as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/auth/login',
@@ -86,10 +74,35 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DocumentsSlugEditRoute = DocumentsSlugEditRouteImport.update({
-  id: '/edit',
-  path: '/edit',
-  getParentRoute: () => DocumentsSlugRoute,
+const ProtectedAdminRoute = ProtectedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+const ApiV1TagsRoute = ApiV1TagsRouteImport.update({
+  id: '/api/v1/tags',
+  path: '/api/v1/tags',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1SpacesRoute = ApiV1SpacesRouteImport.update({
+  id: '/api/v1/spaces',
+  path: '/api/v1/spaces',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1OpenapiRoute = ApiV1OpenapiRouteImport.update({
+  id: '/api/v1/openapi',
+  path: '/api/v1/openapi',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1DocumentsRoute = ApiV1DocumentsRouteImport.update({
+  id: '/api/v1/documents',
+  path: '/api/v1/documents',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1CategoriesRoute = ApiV1CategoriesRouteImport.update({
+  id: '/api/v1/categories',
+  path: '/api/v1/categories',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiInstallStateRoute = ApiInstallStateRouteImport.update({
   id: '/api/install/state',
@@ -106,135 +119,226 @@ const ApiInstallConfigRoute = ApiInstallConfigRouteImport.update({
   path: '/api/install/config',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProtectedTagsSlugRoute = ProtectedTagsSlugRouteImport.update({
+  id: '/tags/$slug',
+  path: '/tags/$slug',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+const ProtectedSpacesSlugRoute = ProtectedSpacesSlugRouteImport.update({
+  id: '/spaces/$slug',
+  path: '/spaces/$slug',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+const ProtectedSettingsTokensRoute = ProtectedSettingsTokensRouteImport.update({
+  id: '/settings/tokens',
+  path: '/settings/tokens',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+const ProtectedDocumentsNewRoute = ProtectedDocumentsNewRouteImport.update({
+  id: '/documents/new',
+  path: '/documents/new',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+const ProtectedDocumentsSlugRoute = ProtectedDocumentsSlugRouteImport.update({
+  id: '/documents/$slug',
+  path: '/documents/$slug',
+  getParentRoute: () => ProtectedRoute,
+} as any)
+const ApiV1SpacesTreeRoute = ApiV1SpacesTreeRouteImport.update({
+  id: '/tree',
+  path: '/tree',
+  getParentRoute: () => ApiV1SpacesRoute,
+} as any)
+const ApiV1DocumentsSlugRoute = ApiV1DocumentsSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => ApiV1DocumentsRoute,
+} as any)
+const ProtectedDocumentsSlugEditRoute =
+  ProtectedDocumentsSlugEditRouteImport.update({
+    id: '/edit',
+    path: '/edit',
+    getParentRoute: () => ProtectedDocumentsSlugRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/': typeof ProtectedIndexRoute
   '/install': typeof InstallRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/swagger': typeof SwaggerRoute
+  '/admin': typeof ProtectedAdminRoute
   '/api/health': typeof ApiHealthRoute
   '/auth/login': typeof AuthLoginRoute
-  '/documents/$slug': typeof DocumentsSlugRouteWithChildren
-  '/documents/new': typeof DocumentsNewRoute
-  '/spaces/$slug': typeof SpacesSlugRoute
-  '/tags/$slug': typeof TagsSlugRoute
+  '/documents/$slug': typeof ProtectedDocumentsSlugRouteWithChildren
+  '/documents/new': typeof ProtectedDocumentsNewRoute
+  '/settings/tokens': typeof ProtectedSettingsTokensRoute
+  '/spaces/$slug': typeof ProtectedSpacesSlugRoute
+  '/tags/$slug': typeof ProtectedTagsSlugRoute
   '/api/install/config': typeof ApiInstallConfigRoute
   '/api/install/run': typeof ApiInstallRunRoute
   '/api/install/state': typeof ApiInstallStateRoute
-  '/documents/$slug/edit': typeof DocumentsSlugEditRoute
+  '/api/v1/categories': typeof ApiV1CategoriesRoute
+  '/api/v1/documents': typeof ApiV1DocumentsRouteWithChildren
+  '/api/v1/openapi': typeof ApiV1OpenapiRoute
+  '/api/v1/spaces': typeof ApiV1SpacesRouteWithChildren
+  '/api/v1/tags': typeof ApiV1TagsRoute
+  '/documents/$slug/edit': typeof ProtectedDocumentsSlugEditRoute
+  '/api/v1/documents/$slug': typeof ApiV1DocumentsSlugRoute
+  '/api/v1/spaces/tree': typeof ApiV1SpacesTreeRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
   '/install': typeof InstallRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/swagger': typeof SwaggerRoute
+  '/admin': typeof ProtectedAdminRoute
   '/api/health': typeof ApiHealthRoute
   '/auth/login': typeof AuthLoginRoute
-  '/documents/$slug': typeof DocumentsSlugRouteWithChildren
-  '/documents/new': typeof DocumentsNewRoute
-  '/spaces/$slug': typeof SpacesSlugRoute
-  '/tags/$slug': typeof TagsSlugRoute
+  '/': typeof ProtectedIndexRoute
+  '/documents/$slug': typeof ProtectedDocumentsSlugRouteWithChildren
+  '/documents/new': typeof ProtectedDocumentsNewRoute
+  '/settings/tokens': typeof ProtectedSettingsTokensRoute
+  '/spaces/$slug': typeof ProtectedSpacesSlugRoute
+  '/tags/$slug': typeof ProtectedTagsSlugRoute
   '/api/install/config': typeof ApiInstallConfigRoute
   '/api/install/run': typeof ApiInstallRunRoute
   '/api/install/state': typeof ApiInstallStateRoute
-  '/documents/$slug/edit': typeof DocumentsSlugEditRoute
+  '/api/v1/categories': typeof ApiV1CategoriesRoute
+  '/api/v1/documents': typeof ApiV1DocumentsRouteWithChildren
+  '/api/v1/openapi': typeof ApiV1OpenapiRoute
+  '/api/v1/spaces': typeof ApiV1SpacesRouteWithChildren
+  '/api/v1/tags': typeof ApiV1TagsRoute
+  '/documents/$slug/edit': typeof ProtectedDocumentsSlugEditRoute
+  '/api/v1/documents/$slug': typeof ApiV1DocumentsSlugRoute
+  '/api/v1/spaces/tree': typeof ApiV1SpacesTreeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/_protected': typeof ProtectedRouteWithChildren
   '/install': typeof InstallRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/swagger': typeof SwaggerRoute
+  '/_protected/admin': typeof ProtectedAdminRoute
   '/api/health': typeof ApiHealthRoute
   '/auth/login': typeof AuthLoginRoute
-  '/documents/$slug': typeof DocumentsSlugRouteWithChildren
-  '/documents/new': typeof DocumentsNewRoute
-  '/spaces/$slug': typeof SpacesSlugRoute
-  '/tags/$slug': typeof TagsSlugRoute
+  '/_protected/': typeof ProtectedIndexRoute
+  '/_protected/documents/$slug': typeof ProtectedDocumentsSlugRouteWithChildren
+  '/_protected/documents/new': typeof ProtectedDocumentsNewRoute
+  '/_protected/settings/tokens': typeof ProtectedSettingsTokensRoute
+  '/_protected/spaces/$slug': typeof ProtectedSpacesSlugRoute
+  '/_protected/tags/$slug': typeof ProtectedTagsSlugRoute
   '/api/install/config': typeof ApiInstallConfigRoute
   '/api/install/run': typeof ApiInstallRunRoute
   '/api/install/state': typeof ApiInstallStateRoute
-  '/documents/$slug/edit': typeof DocumentsSlugEditRoute
+  '/api/v1/categories': typeof ApiV1CategoriesRoute
+  '/api/v1/documents': typeof ApiV1DocumentsRouteWithChildren
+  '/api/v1/openapi': typeof ApiV1OpenapiRoute
+  '/api/v1/spaces': typeof ApiV1SpacesRouteWithChildren
+  '/api/v1/tags': typeof ApiV1TagsRoute
+  '/_protected/documents/$slug/edit': typeof ProtectedDocumentsSlugEditRoute
+  '/api/v1/documents/$slug': typeof ApiV1DocumentsSlugRoute
+  '/api/v1/spaces/tree': typeof ApiV1SpacesTreeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/admin'
     | '/install'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/swagger'
+    | '/admin'
     | '/api/health'
     | '/auth/login'
     | '/documents/$slug'
     | '/documents/new'
+    | '/settings/tokens'
     | '/spaces/$slug'
     | '/tags/$slug'
     | '/api/install/config'
     | '/api/install/run'
     | '/api/install/state'
+    | '/api/v1/categories'
+    | '/api/v1/documents'
+    | '/api/v1/openapi'
+    | '/api/v1/spaces'
+    | '/api/v1/tags'
     | '/documents/$slug/edit'
+    | '/api/v1/documents/$slug'
+    | '/api/v1/spaces/tree'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
-    | '/admin'
     | '/install'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/swagger'
+    | '/admin'
     | '/api/health'
     | '/auth/login'
+    | '/'
     | '/documents/$slug'
     | '/documents/new'
+    | '/settings/tokens'
     | '/spaces/$slug'
     | '/tags/$slug'
     | '/api/install/config'
     | '/api/install/run'
     | '/api/install/state'
+    | '/api/v1/categories'
+    | '/api/v1/documents'
+    | '/api/v1/openapi'
+    | '/api/v1/spaces'
+    | '/api/v1/tags'
     | '/documents/$slug/edit'
+    | '/api/v1/documents/$slug'
+    | '/api/v1/spaces/tree'
   id:
     | '__root__'
-    | '/'
-    | '/admin'
+    | '/_protected'
     | '/install'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/swagger'
+    | '/_protected/admin'
     | '/api/health'
     | '/auth/login'
-    | '/documents/$slug'
-    | '/documents/new'
-    | '/spaces/$slug'
-    | '/tags/$slug'
+    | '/_protected/'
+    | '/_protected/documents/$slug'
+    | '/_protected/documents/new'
+    | '/_protected/settings/tokens'
+    | '/_protected/spaces/$slug'
+    | '/_protected/tags/$slug'
     | '/api/install/config'
     | '/api/install/run'
     | '/api/install/state'
-    | '/documents/$slug/edit'
+    | '/api/v1/categories'
+    | '/api/v1/documents'
+    | '/api/v1/openapi'
+    | '/api/v1/spaces'
+    | '/api/v1/tags'
+    | '/_protected/documents/$slug/edit'
+    | '/api/v1/documents/$slug'
+    | '/api/v1/spaces/tree'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  AdminRoute: typeof AdminRoute
+  ProtectedRoute: typeof ProtectedRouteWithChildren
   InstallRoute: typeof InstallRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SwaggerRoute: typeof SwaggerRoute
   ApiHealthRoute: typeof ApiHealthRoute
   AuthLoginRoute: typeof AuthLoginRoute
-  DocumentsSlugRoute: typeof DocumentsSlugRouteWithChildren
-  DocumentsNewRoute: typeof DocumentsNewRoute
-  SpacesSlugRoute: typeof SpacesSlugRoute
-  TagsSlugRoute: typeof TagsSlugRoute
   ApiInstallConfigRoute: typeof ApiInstallConfigRoute
   ApiInstallRunRoute: typeof ApiInstallRunRoute
   ApiInstallStateRoute: typeof ApiInstallStateRoute
+  ApiV1CategoriesRoute: typeof ApiV1CategoriesRoute
+  ApiV1DocumentsRoute: typeof ApiV1DocumentsRouteWithChildren
+  ApiV1OpenapiRoute: typeof ApiV1OpenapiRoute
+  ApiV1SpacesRoute: typeof ApiV1SpacesRouteWithChildren
+  ApiV1TagsRoute: typeof ApiV1TagsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -267,47 +371,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InstallRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
+    '/_protected': {
+      id: '/_protected'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof ProtectedRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
+    '/_protected/': {
+      id: '/_protected/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/tags/$slug': {
-      id: '/tags/$slug'
-      path: '/tags/$slug'
-      fullPath: '/tags/$slug'
-      preLoaderRoute: typeof TagsSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/spaces/$slug': {
-      id: '/spaces/$slug'
-      path: '/spaces/$slug'
-      fullPath: '/spaces/$slug'
-      preLoaderRoute: typeof SpacesSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/documents/new': {
-      id: '/documents/new'
-      path: '/documents/new'
-      fullPath: '/documents/new'
-      preLoaderRoute: typeof DocumentsNewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/documents/$slug': {
-      id: '/documents/$slug'
-      path: '/documents/$slug'
-      fullPath: '/documents/$slug'
-      preLoaderRoute: typeof DocumentsSlugRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof ProtectedIndexRouteImport
+      parentRoute: typeof ProtectedRoute
     }
     '/auth/login': {
       id: '/auth/login'
@@ -323,12 +399,47 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/documents/$slug/edit': {
-      id: '/documents/$slug/edit'
-      path: '/edit'
-      fullPath: '/documents/$slug/edit'
-      preLoaderRoute: typeof DocumentsSlugEditRouteImport
-      parentRoute: typeof DocumentsSlugRoute
+    '/_protected/admin': {
+      id: '/_protected/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof ProtectedAdminRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/api/v1/tags': {
+      id: '/api/v1/tags'
+      path: '/api/v1/tags'
+      fullPath: '/api/v1/tags'
+      preLoaderRoute: typeof ApiV1TagsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/spaces': {
+      id: '/api/v1/spaces'
+      path: '/api/v1/spaces'
+      fullPath: '/api/v1/spaces'
+      preLoaderRoute: typeof ApiV1SpacesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/openapi': {
+      id: '/api/v1/openapi'
+      path: '/api/v1/openapi'
+      fullPath: '/api/v1/openapi'
+      preLoaderRoute: typeof ApiV1OpenapiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/documents': {
+      id: '/api/v1/documents'
+      path: '/api/v1/documents'
+      fullPath: '/api/v1/documents'
+      preLoaderRoute: typeof ApiV1DocumentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/categories': {
+      id: '/api/v1/categories'
+      path: '/api/v1/categories'
+      fullPath: '/api/v1/categories'
+      preLoaderRoute: typeof ApiV1CategoriesRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/install/state': {
       id: '/api/install/state'
@@ -351,37 +462,143 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiInstallConfigRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_protected/tags/$slug': {
+      id: '/_protected/tags/$slug'
+      path: '/tags/$slug'
+      fullPath: '/tags/$slug'
+      preLoaderRoute: typeof ProtectedTagsSlugRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/spaces/$slug': {
+      id: '/_protected/spaces/$slug'
+      path: '/spaces/$slug'
+      fullPath: '/spaces/$slug'
+      preLoaderRoute: typeof ProtectedSpacesSlugRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/settings/tokens': {
+      id: '/_protected/settings/tokens'
+      path: '/settings/tokens'
+      fullPath: '/settings/tokens'
+      preLoaderRoute: typeof ProtectedSettingsTokensRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/documents/new': {
+      id: '/_protected/documents/new'
+      path: '/documents/new'
+      fullPath: '/documents/new'
+      preLoaderRoute: typeof ProtectedDocumentsNewRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/_protected/documents/$slug': {
+      id: '/_protected/documents/$slug'
+      path: '/documents/$slug'
+      fullPath: '/documents/$slug'
+      preLoaderRoute: typeof ProtectedDocumentsSlugRouteImport
+      parentRoute: typeof ProtectedRoute
+    }
+    '/api/v1/spaces/tree': {
+      id: '/api/v1/spaces/tree'
+      path: '/tree'
+      fullPath: '/api/v1/spaces/tree'
+      preLoaderRoute: typeof ApiV1SpacesTreeRouteImport
+      parentRoute: typeof ApiV1SpacesRoute
+    }
+    '/api/v1/documents/$slug': {
+      id: '/api/v1/documents/$slug'
+      path: '/$slug'
+      fullPath: '/api/v1/documents/$slug'
+      preLoaderRoute: typeof ApiV1DocumentsSlugRouteImport
+      parentRoute: typeof ApiV1DocumentsRoute
+    }
+    '/_protected/documents/$slug/edit': {
+      id: '/_protected/documents/$slug/edit'
+      path: '/edit'
+      fullPath: '/documents/$slug/edit'
+      preLoaderRoute: typeof ProtectedDocumentsSlugEditRouteImport
+      parentRoute: typeof ProtectedDocumentsSlugRoute
+    }
   }
 }
 
-interface DocumentsSlugRouteChildren {
-  DocumentsSlugEditRoute: typeof DocumentsSlugEditRoute
+interface ProtectedDocumentsSlugRouteChildren {
+  ProtectedDocumentsSlugEditRoute: typeof ProtectedDocumentsSlugEditRoute
 }
 
-const DocumentsSlugRouteChildren: DocumentsSlugRouteChildren = {
-  DocumentsSlugEditRoute: DocumentsSlugEditRoute,
+const ProtectedDocumentsSlugRouteChildren: ProtectedDocumentsSlugRouteChildren =
+  {
+    ProtectedDocumentsSlugEditRoute: ProtectedDocumentsSlugEditRoute,
+  }
+
+const ProtectedDocumentsSlugRouteWithChildren =
+  ProtectedDocumentsSlugRoute._addFileChildren(
+    ProtectedDocumentsSlugRouteChildren,
+  )
+
+interface ProtectedRouteChildren {
+  ProtectedAdminRoute: typeof ProtectedAdminRoute
+  ProtectedIndexRoute: typeof ProtectedIndexRoute
+  ProtectedDocumentsSlugRoute: typeof ProtectedDocumentsSlugRouteWithChildren
+  ProtectedDocumentsNewRoute: typeof ProtectedDocumentsNewRoute
+  ProtectedSettingsTokensRoute: typeof ProtectedSettingsTokensRoute
+  ProtectedSpacesSlugRoute: typeof ProtectedSpacesSlugRoute
+  ProtectedTagsSlugRoute: typeof ProtectedTagsSlugRoute
 }
 
-const DocumentsSlugRouteWithChildren = DocumentsSlugRoute._addFileChildren(
-  DocumentsSlugRouteChildren,
+const ProtectedRouteChildren: ProtectedRouteChildren = {
+  ProtectedAdminRoute: ProtectedAdminRoute,
+  ProtectedIndexRoute: ProtectedIndexRoute,
+  ProtectedDocumentsSlugRoute: ProtectedDocumentsSlugRouteWithChildren,
+  ProtectedDocumentsNewRoute: ProtectedDocumentsNewRoute,
+  ProtectedSettingsTokensRoute: ProtectedSettingsTokensRoute,
+  ProtectedSpacesSlugRoute: ProtectedSpacesSlugRoute,
+  ProtectedTagsSlugRoute: ProtectedTagsSlugRoute,
+}
+
+const ProtectedRouteWithChildren = ProtectedRoute._addFileChildren(
+  ProtectedRouteChildren,
+)
+
+interface ApiV1DocumentsRouteChildren {
+  ApiV1DocumentsSlugRoute: typeof ApiV1DocumentsSlugRoute
+}
+
+const ApiV1DocumentsRouteChildren: ApiV1DocumentsRouteChildren = {
+  ApiV1DocumentsSlugRoute: ApiV1DocumentsSlugRoute,
+}
+
+const ApiV1DocumentsRouteWithChildren = ApiV1DocumentsRoute._addFileChildren(
+  ApiV1DocumentsRouteChildren,
+)
+
+interface ApiV1SpacesRouteChildren {
+  ApiV1SpacesTreeRoute: typeof ApiV1SpacesTreeRoute
+}
+
+const ApiV1SpacesRouteChildren: ApiV1SpacesRouteChildren = {
+  ApiV1SpacesTreeRoute: ApiV1SpacesTreeRoute,
+}
+
+const ApiV1SpacesRouteWithChildren = ApiV1SpacesRoute._addFileChildren(
+  ApiV1SpacesRouteChildren,
 )
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  AdminRoute: AdminRoute,
+  ProtectedRoute: ProtectedRouteWithChildren,
   InstallRoute: InstallRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   SwaggerRoute: SwaggerRoute,
   ApiHealthRoute: ApiHealthRoute,
   AuthLoginRoute: AuthLoginRoute,
-  DocumentsSlugRoute: DocumentsSlugRouteWithChildren,
-  DocumentsNewRoute: DocumentsNewRoute,
-  SpacesSlugRoute: SpacesSlugRoute,
-  TagsSlugRoute: TagsSlugRoute,
   ApiInstallConfigRoute: ApiInstallConfigRoute,
   ApiInstallRunRoute: ApiInstallRunRoute,
   ApiInstallStateRoute: ApiInstallStateRoute,
+  ApiV1CategoriesRoute: ApiV1CategoriesRoute,
+  ApiV1DocumentsRoute: ApiV1DocumentsRouteWithChildren,
+  ApiV1OpenapiRoute: ApiV1OpenapiRoute,
+  ApiV1SpacesRoute: ApiV1SpacesRouteWithChildren,
+  ApiV1TagsRoute: ApiV1TagsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -51,7 +51,6 @@ export const auth = betterAuth({
     useSecureCookies: process.env.NODE_ENV === 'production',
   },
   plugins: [
-    tanstackStartCookies(),
     apiKey({
       // API clients may send this header; the web UI uses session cookies.
       apiKeyHeaders: ['x-api-key'],
@@ -62,6 +61,7 @@ export const auth = betterAuth({
       // is enforced separately by src/lib/rate-limit.server.ts at the service layer.
       rateLimit: { enabled: false },
     }),
+    tanstackStartCookies(),
   ],
   // Custom additional fields that we need in the user table.
   // Without this, better-auth INSERTs without `username` (NOT NULL → fails).

@@ -318,7 +318,7 @@ function StepBar({ currentStepIndex }: { currentStepIndex: number }) {
           <li key={item.key} className="min-w-0">
             <div className="flex items-center gap-2">
               <span
-                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${done ? 'bg-[#1677ff] text-white' : active ? 'bg-[#e6f4ff] text-[#0958d9] ring-1 ring-[#91caff]' : 'bg-[#f0f2f5] text-[#8c8c8c]'}`}
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${done ? 'bg-[#1677ff] text-white' : active ? 'border border-[#91caff] bg-[#e6f4ff] text-[#0958d9]' : 'bg-[#f0f2f5] text-[#8c8c8c]'}`}
               >
                 {done ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
               </span>

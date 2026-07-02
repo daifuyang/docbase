@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
 import * as schema from '~/../db/schema'
 import { auth } from '~/lib/auth.server'
 import { db } from '~/lib/db.server'
@@ -201,16 +201,18 @@ export async function createMemberService(
 
 /**
  * Create a long-lived API key for the given user.
- * Called from server-side (CLI's auth login) — we trust the userId from
- * signInService and pass it directly via body. The api-key plugin only
- * enforces session auth when ctx.request / ctx.headers is set, which we
- * intentionally omit here.
+ * Called from authenticated server-side flows. The api-key plugin only
+ * enforces session auth when request headers are passed into the plugin
+ * call, so we validate the DocBase ServiceContext first and then pass the
+ * trusted userId directly.
  */
-export async function createApiKeyService(input: {
-  userId: string
-  name?: string
-  expiresIn?: number
-}): Promise<{
+export async function createApiKeyService(
+  ctx: ServiceContext,
+  input: {
+    name?: string
+    expiresIn?: number
+  },
+): Promise<{
   id: string
   key: string
   prefix: string | null
@@ -220,8 +222,8 @@ export async function createApiKeyService(input: {
 }> {
   const created = (await auth.api.createApiKey({
     body: {
-      userId: input.userId,
-      name: input.name ?? 'cli',
+      userId: ctx.userId,
+      name: input.name ?? 'api-key',
       expiresIn: input.expiresIn,
     },
     asResponse: false,
@@ -238,7 +240,7 @@ export async function createApiKeyService(input: {
     id: created.id,
     key: created.key,
     prefix: created.prefix ?? null,
-    userId: input.userId,
+    userId: ctx.userId,
     createdAt: toIsoString(created.createdAt),
     expiresAt: created.expiresAt ? toIsoString(created.expiresAt) : null,
   }
@@ -254,20 +256,47 @@ export async function listApiKeysService(ctx: ServiceContext): Promise<{
     lastRequest: string | null
   }>
 }> {
-  // listApiKeys requires a session — when called from CLI with an api key,
-  // we can't satisfy that directly. For now we return an empty list and
-  // recommend `auth logout` (which already knows the apiKeyId) for revocation.
-  void ctx
-  return { items: [] }
+  const rows = await db
+    .select({
+      id: schema.apikey.id,
+      name: schema.apikey.name,
+      prefix: schema.apikey.prefix,
+      start: schema.apikey.start,
+      createdAt: schema.apikey.createdAt,
+      expiresAt: schema.apikey.expiresAt,
+      lastRequest: schema.apikey.lastRequest,
+    })
+    .from(schema.apikey)
+    .where(eq(schema.apikey.referenceId, ctx.userId))
+    .orderBy(desc(schema.apikey.createdAt))
+
+  return {
+    items: rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      prefix: row.prefix ?? row.start ?? null,
+      createdAt: toIsoString(row.createdAt),
+      expiresAt: row.expiresAt ? toIsoString(row.expiresAt) : null,
+      lastRequest: row.lastRequest ? toIsoString(row.lastRequest) : null,
+    })),
+  }
 }
 
 export async function revokeApiKeyService(
-  _ctx: ServiceContext,
+  ctx: ServiceContext,
   input: { keyId: string },
 ): Promise<{ ok: true }> {
+  const existing = await db.query.apikey.findFirst({
+    where: and(eq(schema.apikey.id, input.keyId), eq(schema.apikey.referenceId, ctx.userId)),
+    columns: { id: true },
+  })
+  if (!existing) throw Errors.notFound('访问令牌不存在')
+
   // Direct DB delete — bypasses session requirement (the api-key plugin
   // doesn't expose a server-only delete that skips auth checks).
-  await db.delete(schema.apikey).where(eq(schema.apikey.id, input.keyId))
+  await db
+    .delete(schema.apikey)
+    .where(and(eq(schema.apikey.id, input.keyId), eq(schema.apikey.referenceId, ctx.userId)))
   return { ok: true }
 }
 
