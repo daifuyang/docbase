@@ -53,15 +53,29 @@ jobs:
           fetch-depth: 1
           ref: deploy
 
-      # ---------- (1) 安装工具 ----------
-      - name: Install tools
+      # ---------- (1) 安装工具 + 配置凭证 ----------
+      - name: Install tools + configure s credentials
+        env:
+          ALIYUN_AK: ${{ secrets.ALIYUN_AK }}
+          ALIYUN_SK: ${{ secrets.ALIYUN_SK }}
         run: |
           set -e
           npm install -g @serverless-devs/s
           s --version
+          # 配置 s 凭证（enterprise AK/SK 用于 FC 部署）
+          s config add --AccessKeyID "$ALIYUN_AK" --AccessKeySecret "$ALIYUN_SK" --Provider aliyun --Alias default
 
       # ---------- (2) Stage FC env 文件 ----------
       - name: Stage FC env file
+        env:
+          VPC_ID: ${{ secrets.VPC_ID }}
+          VSWITCH_ID: ${{ secrets.VSWITCH_ID }}
+          SECURITY_GROUP_ID: ${{ secrets.SECURITY_GROUP_ID }}
+          APP_DB_URL: ${{ secrets.APP_DB_URL }}
+          REDIS_APP_URL: ${{ secrets.REDIS_APP_URL }}
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+          ALIYUN_AK: ${{ secrets.ALIYUN_AK }}
+          ALIYUN_SK: ${{ secrets.ALIYUN_SK }}
         run: |
           set -euo pipefail
           : "${RUNNER_TEMP:=/tmp}"
