@@ -30,8 +30,23 @@ import {
   readEnvRuntimeConfig,
   readRuntimeConfig,
 } from '~/lib/runtime-config.server'
-import { ensureMigrationsApplied } from '~/lib/migrate-on-boot.server'
 import type { InstallConfigInput, InstallInput } from '~/shared/validation/install'
+
+// Boot-time migration trigger. We dynamic-import the `*.server.*` module
+// here (instead of a top-level `import`) so it stays out of the static
+// dependency graph that TanStack Start's import-protection plugin walks
+// from the client entry — `install.ts` is a server-fn shim that's also
+// reachable from the client. The dynamic import resolves on first call,
+// runs the migrator once, then resolves to no-op on subsequent calls.
+let bootMigratePromise: Promise<void> | null = null
+async function ensureMigrationsApplied(): Promise<void> {
+  if (!bootMigratePromise) {
+    bootMigratePromise = import('~/lib/migrate-on-boot.server').then((mod) =>
+      mod.ensureMigrationsApplied(),
+    )
+  }
+  return bootMigratePromise
+}
 
 export type InstallState = {
   status: 'ready' | 'needs-install' | 'installing' | 'config-error' | 'broken'
