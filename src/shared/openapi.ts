@@ -165,7 +165,9 @@ export const docbaseOpenApiSpec = {
         summary: 'Create a document',
         requestBody: {
           required: true,
-          content: { 'application/json': { schema: { $ref: '#/components/schemas/CreateDocument' } } },
+          content: {
+            'application/json': { schema: { $ref: '#/components/schemas/CreateDocument' } },
+          },
         },
         responses: { '201': { description: 'Created' } },
       },
@@ -176,7 +178,10 @@ export const docbaseOpenApiSpec = {
         tags: ['documents'],
         summary: 'Get a document by slug',
         parameters: [{ name: 'slug', in: 'path', required: true, schema: { type: 'string' } }],
-        responses: { '200': { description: 'Document detail' }, '404': { description: 'Not found' } },
+        responses: {
+          '200': { description: 'Document detail' },
+          '404': { description: 'Not found' },
+        },
       },
       patch: {
         operationId: 'documents.update',
@@ -185,7 +190,9 @@ export const docbaseOpenApiSpec = {
         parameters: [{ name: 'slug', in: 'path', required: true, schema: { type: 'string' } }],
         requestBody: {
           required: true,
-          content: { 'application/json': { schema: { $ref: '#/components/schemas/UpdateDocument' } } },
+          content: {
+            'application/json': { schema: { $ref: '#/components/schemas/UpdateDocument' } },
+          },
         },
         responses: { '200': { description: 'Updated' } },
       },
@@ -271,6 +278,57 @@ export const docbaseOpenApiSpec = {
         summary: 'List tags',
         parameters: [{ name: 'limit', in: 'query', schema: { type: 'integer', default: 100 } }],
         responses: { '200': { description: 'Tags' } },
+      },
+    },
+    '/api/v1/quick-notes': {
+      get: {
+        operationId: 'quickNotes.list',
+        tags: ['quick-notes'],
+        summary: 'List the current user’s quick notes (newest first)',
+        parameters: [{ name: 'limit', in: 'query', schema: { type: 'integer', default: 50 } }],
+        responses: { '200': { description: 'Quick notes' } },
+      },
+      post: {
+        operationId: 'quickNotes.create',
+        tags: ['quick-notes'],
+        summary: 'Create a quick note',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['content'],
+                properties: {
+                  content: { type: 'string', minLength: 1, maxLength: 4000 },
+                },
+              },
+            },
+          },
+        },
+        responses: { '201': { description: 'Created' } },
+      },
+    },
+    '/api/v1/quick-notes/{id}': {
+      delete: {
+        operationId: 'quickNotes.delete',
+        tags: ['quick-notes'],
+        summary: 'Delete a quick note',
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: { '200': { description: 'Deleted' } },
+      },
+    },
+    '/api/v1/quick-notes/{id}/promote': {
+      post: {
+        operationId: 'quickNotes.promote',
+        tags: ['quick-notes'],
+        summary: 'Promote a quick note into a draft document',
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: { '200': { description: 'Promoted' } },
       },
     },
   },

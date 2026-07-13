@@ -1,7 +1,16 @@
 'use client'
 
 import { Link, useRouterState } from '@tanstack/react-router'
-import { ChevronDown, ChevronRight, FileText, Folder, FolderOpen, Home, Plus } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  Folder,
+  FolderOpen,
+  Home,
+  NotebookPen,
+  Plus,
+} from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { cn } from '~/lib/utils'
@@ -72,6 +81,9 @@ export function SidebarContent({
         </div>
         <SidebarLink to="/" icon={<Home className="h-4 w-4" />}>
           知识首页
+        </SidebarLink>
+        <SidebarLink to="/notes" icon={<NotebookPen className="h-4 w-4" />}>
+          我的小记
         </SidebarLink>
       </nav>
 

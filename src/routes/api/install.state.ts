@@ -18,8 +18,11 @@ export const Route = createFileRoute('/api/install/state')({
 })
 
 function installDisabledResponse() {
-  return new Response(JSON.stringify({ ok: false, error: 'FC production mode disables install APIs' }), {
-    status: 404,
-    headers: { 'content-type': 'application/json; charset=utf-8' },
-  })
+  return new Response(
+    JSON.stringify({ ok: false, error: 'FC production mode disables install APIs' }),
+    {
+      status: 404,
+      headers: { 'content-type': 'application/json; charset=utf-8' },
+    },
+  )
 }

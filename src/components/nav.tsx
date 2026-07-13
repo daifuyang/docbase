@@ -1,6 +1,7 @@
 import { Link, useRouter } from '@tanstack/react-router'
-import { ChevronDown, KeyRound, LogOut, Menu, ShieldCheck } from 'lucide-react'
+import { ChevronDown, KeyRound, LogOut, Menu, NotebookPen, ShieldCheck } from 'lucide-react'
 import { useTransition } from 'react'
+import { useQuickNote } from '~/components/quick-note-provider'
 import { SearchDialog } from '~/components/search-dialog'
 import { SidebarContent } from '~/components/sidebar'
 import { ThemeMenuItem } from '~/components/theme-toggle'
@@ -36,6 +37,7 @@ type NavProps = {
 
 export function Nav({ me, tags = [], spaces = [], expandedKeys = [] }: NavProps) {
   const router = useRouter()
+  const quickNote = useQuickNote()
 
   const [pending, startTransition] = useTransition()
 
@@ -80,6 +82,16 @@ export function Nav({ me, tags = [], spaces = [], expandedKeys = [] }: NavProps)
 
         <nav className="ml-auto flex items-center gap-2">
           <SearchDialog popularTags={tags} />
+          <Button
+            type="button"
+            variant="ghost"
+            className="hidden h-9 gap-1.5 px-2.5 sm:inline-flex"
+            onClick={quickNote.open}
+            title="快速记录（⌘/Ctrl + Shift + N）"
+          >
+            <NotebookPen className="h-4 w-4" />
+            小记
+          </Button>
           {me?.role === 'admin' && (
             <Button asChild variant="ghost" className="hidden h-9 gap-1.5 px-2.5 sm:inline-flex">
               <Link to="/admin">

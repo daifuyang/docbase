@@ -12,6 +12,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FC_DIR="$ROOT/fc-deploy"
+DOMAIN_YAML="$ROOT/s.yaml"
 ENV_FILE="${DOCBASE_FC_ENV_FILE:-$FC_DIR/prod.env}"
 CMD="${1:-apply}"
 
@@ -68,6 +69,15 @@ run_s() {
   (
     cd "$FC_DIR"
     s "$action" -f s.yaml "$@" $(s_args)
+  ) 2>&1 | redact
+}
+
+run_domain_s() {
+  local action="$1"
+  shift || true
+  (
+    cd "$ROOT"
+    s "$action" -f "$DOMAIN_YAML" "$@" $(s_args)
   ) 2>&1 | redact
 }
 
@@ -134,6 +144,17 @@ case "$CMD" in
     require_env VPC_ID VSWITCH_ID SECURITY_GROUP_ID DATABASE_URL REDIS_URL \
       BETTER_AUTH_SECRET BETTER_AUTH_URL PUBLIC_APP_URL
     build_package
+    # DB migrations — best-effort here. The CI runner (`.github/workflows/
+    # deploy.yml`) also runs `drizzle-kit migrate` as an explicit step
+    # before publishing, so when the runner can reach the DB the schema
+    # upgrade is guaranteed to happen. This local attempt is a convenience
+    # for the dev workstation case where the user has direct DB access.
+    log "apply DB migrations (best-effort)"
+    if ( cd "$ROOT" && pnpm exec drizzle-kit migrate ) 2>/dev/null; then
+      log "  migrations applied locally"
+    else
+      log "  migrate unreachable from here — relying on deploy workflow runner"
+    fi
     log "deploy fc-deploy/s.yaml"
     run_s deploy -y
     smoke_test
@@ -145,6 +166,20 @@ case "$CMD" in
     build_package
     log "plan fc-deploy/s.yaml"
     run_s plan
+    ;;
+  domain-apply)
+    load_env
+    require_env DOCBASE_DOMAIN DOCBASE_DOMAIN_CERT_NAME \
+      DOCBASE_DOMAIN_CERT_FILE DOCBASE_DOMAIN_KEY_FILE
+    log "deploy root s.yaml (fc3-domain)"
+    run_domain_s deploy -y
+    ;;
+  domain-plan)
+    load_env
+    require_env DOCBASE_DOMAIN DOCBASE_DOMAIN_CERT_NAME \
+      DOCBASE_DOMAIN_CERT_FILE DOCBASE_DOMAIN_KEY_FILE
+    log "plan root s.yaml (fc3-domain)"
+    run_domain_s plan
     ;;
   info)
     load_env
@@ -175,12 +210,16 @@ case "$CMD" in
     ;;
   *)
     cat >&2 <<'EOF'
-usage: scripts/deploy-fc.sh {apply|plan|info|rollback|smoke|package|check|local}
+usage: scripts/deploy-fc.sh {apply|plan|domain-apply|domain-plan|info|rollback|smoke|package|check|local}
 
 env:
   DOCBASE_FC_ENV_FILE       defaults to fc-deploy/prod.env
   DOCBASE_SKIP_BUILD        set to 1 to deploy an existing fc-deploy/code package
   DOCBASE_SMOKE_URL         override PUBLIC_APP_URL for smoke tests
+  DOCBASE_DOMAIN            custom domain for fc3-domain resource
+  DOCBASE_DOMAIN_CERT_NAME  cert display name in FC custom domain config
+  DOCBASE_DOMAIN_CERT_FILE  local PEM/fullchain file path used by fc3-domain
+  DOCBASE_DOMAIN_KEY_FILE   local private key file path used by fc3-domain
 EOF
     exit 1
     ;;

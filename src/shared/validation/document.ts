@@ -86,10 +86,7 @@ export const linkUrlSchema = z
   .trim()
   .min(1, '请输入链接地址')
   .max(2048, '链接过长')
-  .refine(
-    isAcceptableLinkUrl,
-    '链接格式不正确（http(s)://、mailto:、tel:、或以 / 开头的相对路径）',
-  )
+  .refine(isAcceptableLinkUrl, '链接格式不正确（http(s)://、mailto:、tel:、或以 / 开头的相对路径）')
 
 export type CreateDocumentInput = z.infer<typeof createDocumentSchema>
 export type UpdateDocumentInput = z.infer<typeof updateDocumentSchema>

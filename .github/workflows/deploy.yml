@@ -105,6 +105,17 @@ jobs:
             -e 's#^(DATABASE_URL|REDIS_URL|MIGRATE_DATABASE_URL|BETTER_AUTH_SECRET|ALIYUN_AK|ALIYUN_SK)(.*://)([^:]+):([^@]+)@(.*)#\1\2\3:****@\5#' \
             "$OUT"
 
+      # ---------- (2.5) DB migrations (runner 走阿里云内网能直连 PG) ----------
+      # 在 deploy 前跑 schema 升级；idempotent，无新 migration 时为 no-op。
+      # 如果迁移失败，整个 release 阻断，避免发版后端访问不存在的表。
+      - name: Apply DB migrations
+        env:
+          DATABASE_URL: ${{ secrets.APP_DB_URL }}
+        run: |
+          set -euo pipefail
+          echo "=== current schema version ==="
+          pnpm exec drizzle-kit migrate 2>&1 | tail -5
+
       # ---------- (3) 构建 + 发布到 FC + smoke ----------
       - name: Build + deploy to FC + smoke
         run: |

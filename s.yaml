@@ -1,0 +1,24 @@
+edition: 3.0.0
+name: docbase-domain
+access: default
+
+vars:
+  region: cn-shanghai
+  functionName: docbase-web
+
+resources:
+  docbase_domain:
+    component: fc3-domain
+    props:
+      region: ${vars.region}
+      domainName: ${env(DOCBASE_DOMAIN)}
+      protocol: HTTPS
+      certConfig:
+        # 证书由部署侧提供，不把 PEM 文件提交进仓库。
+        certName: ${env(DOCBASE_DOMAIN_CERT_NAME)}
+        certificate: ${env(DOCBASE_DOMAIN_CERT_FILE)}
+        privateKey: ${env(DOCBASE_DOMAIN_KEY_FILE)}
+      routeConfig:
+        routes:
+          - path: /*
+            functionName: ${vars.functionName}

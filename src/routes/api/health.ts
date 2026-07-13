@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { sql } from 'drizzle-orm'
 import { db } from '~/lib/db.server'
-import { ensureRedis, REDIS_PREFIX, redis } from '~/lib/redis.server'
+import { REDIS_PREFIX, ensureRedis, redis } from '~/lib/redis.server'
 
 export const Route = createFileRoute('/api/health')({
   server: {

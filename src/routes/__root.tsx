@@ -9,6 +9,7 @@ import {
 } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
+import { QuickNoteProvider } from '~/components/quick-note-provider'
 import { queryClient } from '~/router'
 import { getInstallGuardState } from '~/server/install'
 import '~/styles/globals.css'
@@ -42,8 +43,10 @@ function RootComponent() {
   return (
     <RootDocument>
       <QueryClientProvider client={queryClient}>
-        <RouteProgress />
-        <Outlet />
+        <QuickNoteProvider>
+          <RouteProgress />
+          <Outlet />
+        </QuickNoteProvider>
       </QueryClientProvider>
     </RootDocument>
   )

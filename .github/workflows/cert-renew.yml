@@ -1,21 +1,22 @@
 name: Cert Renew (Daily)
 
 # =============================================================================
-# 证书续签：每天检查一次，证书快过期（≤30 天）才续签。
+# 证书续签：每天检查一次，DocBase FC 自定义域名证书快过期（≤30 天）才续签。
 #
 # 参考 cert-auto 的逻辑：
-#   aic cert:renew --days 30
-#   - 证书 > 30 天到期 → 无操作，退出
-#   - 证书 ≤ 30 天到期 → 自动续签 + 上传到 Aliyun CAS
+#   1. 检查 Aliyun CAS 中当前域名证书的剩余有效期
+#   2. 证书 > 30 天到期 → 无操作，退出
+#   3. 证书 ≤ 30 天到期 → ACME DNS-01 自动签发 + 上传到 Aliyun CAS
+#   4. 调用根目录 s.yaml 的 fc3-domain 资源，更新 FC 自定义域名绑定
 #
-# 触发：每天 00:00 UTC（北京时间 08:00）
+# 触发：每天北京时间 00:00（UTC 16:00）
 # Runner：GitHub 托管 ubuntu-latest
 # 凭证：AIC_CONFIG secret（aic toml 配置）
 # =============================================================================
 
 on:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '0 16 * * *'
   workflow_dispatch:
     inputs:
       days:
@@ -31,7 +32,13 @@ jobs:
   cert-renew:
     name: cert renew check
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
+
+    env:
+      DOCBASE_DOMAIN: docbase.zerocmf.com
+      DOCBASE_DOMAIN_CERT_NAME: docbase-zerocmf-com
+      DOCBASE_DNS_PROFILE: personal
+      DOCBASE_ALIYUN_CERT_PROFILE: enterprise
 
     steps:
       - name: Checkout
@@ -44,6 +51,19 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Install tools + configure s credentials
+        env:
+          ALIYUN_AK: ${{ secrets.ALIYUN_AK }}
+          ALIYUN_SK: ${{ secrets.ALIYUN_SK }}
+          ALIYUN_ACCOUNT_ID: ${{ secrets.ALIYUN_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          npm install -g @serverless-devs/s @zerocmf/aic
+          s --version
+          aic --version
+          mkdir -p ~/.s
+          printf 'default:\n  AccessKeyID: "%s"\n  AccessKeySecret: "%s"\n  AccountID: "%s"\n' "$ALIYUN_AK" "$ALIYUN_SK" "$ALIYUN_ACCOUNT_ID" > ~/.s/access.yaml
+
       - name: Setup aic config
         env:
           AIC_CONFIG: ${{ secrets.AIC_CONFIG }}
@@ -51,26 +71,24 @@ jobs:
           mkdir -p ~/.config/aic
           printf '%s\n' "$AIC_CONFIG" > ~/.config/aic/config.toml
 
-      - name: Install aic CLI
+      - name: Install acme.sh
         run: |
-          npm install -g @zerocmf/aic
-          aic --version
+          curl https://get.acme.sh | sh -s email=admin@zerocmf.com
 
-      - name: Check certificate expiry
+      - name: Stage domain env file
         run: |
           set -euo pipefail
-          RENEW_DAYS="${{ github.event.inputs.days || '30' }}"
-          echo "▶ Checking certs expiring within $RENEW_DAYS days..."
+          OUT="fc-deploy/prod.env"
+          {
+            echo "DOCBASE_DOMAIN=${DOCBASE_DOMAIN}"
+            echo "DOCBASE_DOMAIN_CERT_NAME=${DOCBASE_DOMAIN_CERT_NAME}"
+            echo "DOCBASE_DNS_PROFILE=${DOCBASE_DNS_PROFILE}"
+            echo "DOCBASE_ALIYUN_CERT_PROFILE=${DOCBASE_ALIYUN_CERT_PROFILE}"
+          } > "$OUT"
 
-          # aic cert:renew 会自动判断是否需要续签，不会无限制重试
-          aic cert:renew --days "$RENEW_DAYS" || {
-            exit_code=$?
-            # aic cert:renew 0=成功续签, 0=无需续签, 非0=真正错误
-            # 避免 exit 1 被当作 workflow 失败处理
-            if [ $exit_code -eq 0 ]; then
-              echo "Certificate check completed."
-            else
-              echo "Certificate check failed with code: $exit_code"
-              exit $exit_code
-            fi
-          }
+      - name: Renew FC custom domain certificate if needed
+        run: |
+          set -euo pipefail
+          export DOCBASE_FC_ENV_FILE="fc-deploy/prod.env"
+          export RENEW_DAYS="${{ github.event.inputs.days || '30' }}"
+          bash scripts/renew-fc-domain-cert.sh

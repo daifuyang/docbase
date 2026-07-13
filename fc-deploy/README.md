@@ -1,6 +1,6 @@
 # DocBase FC 发布标准
 
-本目录是 DocBase 面向阿里云函数计算 FC 3.0 的部署单元。当前标准只支持 TanStack Start 的 Nitro Node 产物，不再兼容旧的 `dist/` + `fc-server.mjs` 方案。
+本目录是 DocBase 面向阿里云函数计算 FC 3.0 的函数代码部署单元。当前标准只支持 TanStack Start 的 Nitro Node 产物，不再兼容旧的 `dist/` + `fc-server.mjs` 方案。自定义域名绑定单独放在仓库根目录 `s.yaml` 管理。
 
 ## 设计原则
 
@@ -166,7 +166,7 @@ LOG_LEVEL=info
 3. 数据库迁移。
 4. 生成临时 `$RUNNER_TEMP/docbase-fc.env`，把 runner 环境变量映射成 `deploy-fc.sh` 需要的标准变量名。
 5. `bash scripts/deploy-fc.sh package` 生成 `fc-deploy/code/`。
-6. 证书续签流程单独执行。
+6. 证书续签流程单独执行；如果拿到了新的 PEM 文件，可再执行 `bash scripts/deploy-fc.sh domain-apply` 更新根目录 `s.yaml` 对应的 `fc3-domain`。
 7. `DOCBASE_SKIP_BUILD=1 bash scripts/deploy-fc.sh plan`。
 8. `DOCBASE_SKIP_BUILD=1 bash scripts/deploy-fc.sh apply`。
 9. 访问 `/api/health` 冒烟。

@@ -20,8 +20,21 @@ const ALLOWED_TAGS = [
   'li',
   'a',
   'img',
+  'table',
+  'thead',
+  'tbody',
+  'tfoot',
+  'tr',
+  'th',
+  'td',
+  'caption',
+  'colgroup',
+  'col',
 ]
 
+// Tables introduce structural attributes (colspan/rowspan/scope) and the
+// data-* attributes we use to carry aggregate semantics into the rendered
+// HTML. Allowing `scope` keeps `<th scope="col">` semantically meaningful.
 const ALLOWED_ATTRS: sanitize.IOptions['allowedAttributes'] = {
   h1: ['id'],
   h2: ['id'],
@@ -31,6 +44,15 @@ const ALLOWED_ATTRS: sanitize.IOptions['allowedAttributes'] = {
   img: ['src', 'alt', 'title', 'width', 'height'],
   code: ['class'],
   pre: ['class'],
+  table: ['class'],
+  thead: ['class'],
+  tbody: ['class'],
+  tfoot: ['class'],
+  tr: ['class', 'data-row-kind'],
+  th: ['colspan', 'rowspan', 'scope', 'class', 'data-col-agg'],
+  td: ['colspan', 'rowspan', 'class', 'data-type', 'data-format', 'data-computed'],
+  colgroup: ['class'],
+  col: ['span', 'class'],
 }
 
 const ALLOWED_SCHEMES = ['http', 'https', 'mailto']

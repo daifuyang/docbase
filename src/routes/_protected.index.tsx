@@ -1,9 +1,10 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
-import { FileText, FolderOpen, PenLine, Plus } from 'lucide-react'
+import { FileText, FolderOpen, NotebookPen, PenLine, Plus } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { DocumentCard } from '~/components/document-card'
 import { Badge } from '~/components/ui/badge'
 import { listDocuments, listMyDocuments } from '~/server/documents'
+import { listQuickNotes } from '~/server/quick-notes'
 import { listSpaceTree } from '~/server/spaces'
 import { listTags } from '~/server/tags'
 
@@ -11,11 +12,12 @@ export const Route = createFileRoute('/_protected/')({
   staleTime: 0,
   shouldReload: true,
   loader: async () => {
-    const [documents, drafts, spaces, tags] = await Promise.all([
+    const [documents, drafts, spaces, tags, quickNotesResult] = await Promise.all([
       listDocuments({ data: { page: 1, pageSize: 12 } }),
       listMyDocuments({ data: { status: 'draft', page: 1, pageSize: 5 } }),
       listSpaceTree(),
       listTags({ data: { limit: 12 } }),
+      listQuickNotes({ data: { limit: 5 } }),
     ])
     const draftItems = drafts.items.filter((document) => document.status === 'draft')
     const draftIds = new Set(draftItems.map((document) => document.id))
@@ -29,6 +31,8 @@ export const Route = createFileRoute('/_protected/')({
       spaces: spaces.items,
       total: documents.total,
       tags: tags.items,
+      quickNotes: quickNotesResult.items,
+      quickNotesTotal: quickNotesResult.total,
     }
   },
   headers: () => ({
@@ -38,7 +42,8 @@ export const Route = createFileRoute('/_protected/')({
 })
 
 function HomePage() {
-  const { documents, drafts, spaces, total, tags } = Route.useLoaderData()
+  const { documents, drafts, spaces, total, tags, quickNotes, quickNotesTotal } =
+    Route.useLoaderData()
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 2xl:px-8">
@@ -78,6 +83,17 @@ function HomePage() {
               <div className="overflow-hidden rounded-lg border border-border bg-surface">
                 {drafts.map((document) => (
                   <DocumentCard key={document.id} document={document} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {quickNotes.length > 0 && (
+            <section>
+              <SectionTitle title="最近小记" meta={`${quickNotesTotal} 条`} />
+              <div className="overflow-hidden rounded-lg border border-border bg-surface">
+                {quickNotes.map((note) => (
+                  <QuickNoteRow key={note.id} note={note} />
                 ))}
               </div>
             </section>
@@ -206,4 +222,36 @@ function EmptyState() {
       </Link>
     </div>
   )
+}
+
+type QuickNoteRowProps = {
+  note: { id: string; content: string; createdAt: string }
+}
+
+function QuickNoteRow({ note }: QuickNoteRowProps) {
+  return (
+    <Link
+      to="/notes"
+      className="group block border-b border-border px-4 py-3 transition-colors last:border-b-0 hover:bg-surface-muted/70"
+    >
+      <p className="line-clamp-2 whitespace-pre-wrap text-sm leading-6 text-foreground group-hover:text-primary">
+        {note.content}
+      </p>
+      <div className="mt-1.5 flex items-center gap-1 text-xs text-muted-foreground">
+        <NotebookPen className="h-3 w-3" />
+        <time dateTime={note.createdAt}>{formatRelativeDate(note.createdAt)}</time>
+      </div>
+    </Link>
+  )
+}
+
+function formatRelativeDate(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  const now = new Date()
+  const diffDays = Math.floor((now.getTime() - d.getTime()) / 86_400_000)
+  if (diffDays === 0) return '今天'
+  if (diffDays === 1) return '昨天'
+  if (diffDays < 7) return `${diffDays} 天前`
+  return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' })
 }

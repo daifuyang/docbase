@@ -27,4 +27,35 @@ describe('sanitizeHtml', () => {
     expect(result).toContain('rel="nofollow noopener"')
     expect(result).toContain('target="_blank"')
   })
+
+  it('preserves table structure and aggregate attributes', () => {
+    const html = `
+      <table class="doc-table">
+        <thead>
+          <tr><th>部门</th><th data-col-agg="sum">金额</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>研发</td><td data-type="number">100</td></tr>
+          <tr data-row-kind="subtotal"><td>小计</td><td data-type="number">100</td></tr>
+        </tbody>
+      </table>
+    `
+    const result = sanitizeHtml(html)
+    expect(result).toContain('<table')
+    expect(result).toContain('<th')
+    expect(result).toContain('data-col-agg="sum"')
+    expect(result).toContain('data-type="number"')
+    expect(result).toContain('data-row-kind="subtotal"')
+  })
+
+  it('strips script payloads nested in tables', () => {
+    const html = `
+      <table>
+        <tr><td><script>alert(1)</script>10</td></tr>
+      </table>
+    `
+    const result = sanitizeHtml(html)
+    expect(result).not.toContain('<script>')
+    expect(result).toContain('10')
+  })
 })

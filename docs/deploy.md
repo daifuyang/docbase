@@ -19,9 +19,10 @@ GitHub deploy 分支
 
 ## 发布标准
 
-标准以 `fc-deploy/` 为唯一 FC 部署入口：
+标准以 `fc-deploy/` 为函数代码部署入口，以根目录 `s.yaml` 为自定义域名入口：
 
 - `fc-deploy/s.yaml`: FC 3.0 函数配置。
+- `s.yaml`: `fc3-domain` 自定义域名配置，只负责把线上域名路由到已部署函数。
 - `fc-deploy/code/`: 构建生成的上传目录。
 - `server/bootstrap`: FC custom runtime 启动脚本模板。
 - `scripts/build-fc.mjs`: 从 TanStack Start 产物生成 `fc-deploy/code/`。
@@ -29,7 +30,6 @@ GitHub deploy 分支
 
 不再使用：
 
-- 根目录 `s.yaml`
 - `server/fc-server.mjs`
 - `scripts/s-deploy.sh`
 - 旧的 `dist/` 或 `server-build/` 发布包
@@ -136,6 +136,29 @@ bash scripts/deploy-fc.sh package
 DOCBASE_SKIP_BUILD=1 pnpm deploy
 ```
 
+## 自定义域名配置
+
+根目录 `s.yaml` 单独声明 `fc3-domain` 资源，绑定当前线上域名 `docbase.zerocmf.com` 到函数 `docbase-web`。这样做有两个目的：
+
+- 保持 `fc-deploy/s.yaml` 仍然只负责函数代码部署和本地 `s local`。
+- 让证书续签流程可以像 `cert-auto` 一样，在部署侧生成 PEM 文件后只更新域名绑定，而不改函数代码包。
+
+域名资源依赖以下环境变量：
+
+| 变量 | 用途 |
+| --- | --- |
+| `DOCBASE_DOMAIN` | 自定义域名，例如 `docbase.zerocmf.com` |
+| `DOCBASE_DOMAIN_CERT_NAME` | FC 域名配置里展示的证书名 |
+| `DOCBASE_DOMAIN_CERT_FILE` | 证书 PEM / fullchain 文件路径 |
+| `DOCBASE_DOMAIN_KEY_FILE` | 私钥文件路径 |
+
+执行方式：
+
+```bash
+pnpm deploy:domain:dry
+pnpm deploy:domain
+```
+
 ## GitHub Actions 发布
 
 `.github/workflows/deploy.yml` 触发：
@@ -150,6 +173,25 @@ DOCBASE_SKIP_BUILD=1 pnpm deploy
 3. 生成 `fc-deploy/prod.env`。
 4. `scripts/deploy-fc.sh apply`，内部完成 build、deploy 和 smoke。
 5. `/api/health` 冒烟。
+
+如果证书续签流程产出了新的 `fullchain.cer` / `private.key`，可以在同一 runner 上继续执行：
+
+```bash
+DOCBASE_DOMAIN=docbase.zerocmf.com \
+DOCBASE_DOMAIN_CERT_NAME=docbase-zerocmf-com \
+DOCBASE_DOMAIN_CERT_FILE=/path/to/fullchain.cer \
+DOCBASE_DOMAIN_KEY_FILE=/path/to/private.key \
+bash scripts/deploy-fc.sh domain-apply
+```
+
+仓库内的 `.github/workflows/cert-renew.yml` 已经把这条链路自动化：
+
+1. 每天北京时间 `00:00` 触发检测。
+2. 读取 Aliyun CAS 中 `docbase.zerocmf.com` 当前上传证书的到期时间。
+3. 若剩余有效期大于阈值（默认 30 天），直接退出。
+4. 若剩余有效期小于等于阈值，执行 `aic cert:issue` 签发新证书。
+5. 将新证书上传到 Aliyun CAS。
+6. 执行 `bash scripts/renew-fc-domain-cert.sh` 内部的 `domain-apply`，更新 FC 自定义域名绑定。
 
 ## 回滚
 

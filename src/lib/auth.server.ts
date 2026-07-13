@@ -29,7 +29,9 @@ export const auth = betterAuth({
   // 这里把生产域、本地 dev 端口、FC 系统 URL 都放进白名单，CI 验证也能用。
   // 多值来源：环境变量 BETTER_AUTH_TRUSTED_ORIGINS（逗号分隔）+ 静态回退。
   trustedOrigins: [
-    ...(process.env.BETTER_AUTH_TRUSTED_ORIGINS?.split(',').map((s) => s.trim()).filter(Boolean) ?? []),
+    ...(process.env.BETTER_AUTH_TRUSTED_ORIGINS?.split(',')
+      .map((s) => s.trim())
+      .filter(Boolean) ?? []),
     process.env.BETTER_AUTH_URL,
     'http://localhost:3000',
     'http://localhost:9000',

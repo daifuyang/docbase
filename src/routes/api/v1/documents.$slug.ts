@@ -15,7 +15,8 @@ export const Route = createFileRoute('/api/v1/documents/$slug')({
         try {
           const ctx = await requireApiContext(request)
           const document = await getDocumentBySlugService(ctx, { slug: params.slug })
-          if (!document) return json({ ok: false, code: 'NOT_FOUND', error: '文档不存在' }, { status: 404 })
+          if (!document)
+            return json({ ok: false, code: 'NOT_FOUND', error: '文档不存在' }, { status: 404 })
           return json({ document })
         } catch (error) {
           return handleApiError(error)
@@ -25,7 +26,8 @@ export const Route = createFileRoute('/api/v1/documents/$slug')({
         try {
           const ctx = await requireApiContext(request)
           const target = await findDocumentIdBySlugService(ctx, { slug: params.slug })
-          if (!target) return json({ ok: false, code: 'NOT_FOUND', error: '文档不存在' }, { status: 404 })
+          if (!target)
+            return json({ ok: false, code: 'NOT_FOUND', error: '文档不存在' }, { status: 404 })
           const body = await parseJson(request)
           const input = updateDocumentSchema.parse({
             id: target.id,
@@ -41,7 +43,8 @@ export const Route = createFileRoute('/api/v1/documents/$slug')({
         try {
           const ctx = await requireApiContext(request)
           const target = await findDocumentIdBySlugService(ctx, { slug: params.slug })
-          if (!target) return json({ ok: false, code: 'NOT_FOUND', error: '文档不存在' }, { status: 404 })
+          if (!target)
+            return json({ ok: false, code: 'NOT_FOUND', error: '文档不存在' }, { status: 404 })
           const result = await deleteDocumentService(ctx, { id: target.id })
           return json(result)
         } catch (error) {

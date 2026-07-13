@@ -39,28 +39,19 @@ export const getDocumentBySlug = createServerFn({ method: 'GET' })
 export const createDocument = createServerFn({ method: 'POST' })
   .validator(createDocumentSchema)
   .handler(async ({ data }) =>
-    createDocumentService(
-      requireUserContext(await contextFromHeaders(getRequestHeaders())),
-      data,
-    ),
+    createDocumentService(requireUserContext(await contextFromHeaders(getRequestHeaders())), data),
   )
 
 export const updateDocument = createServerFn({ method: 'POST' })
   .validator(updateDocumentSchema)
   .handler(async ({ data }) =>
-    updateDocumentService(
-      requireUserContext(await contextFromHeaders(getRequestHeaders())),
-      data,
-    ),
+    updateDocumentService(requireUserContext(await contextFromHeaders(getRequestHeaders())), data),
   )
 
 export const deleteDocument = createServerFn({ method: 'POST' })
   .validator(z.object({ id: z.string().uuid() }))
   .handler(async ({ data }) =>
-    deleteDocumentService(
-      requireUserContext(await contextFromHeaders(getRequestHeaders())),
-      data,
-    ),
+    deleteDocumentService(requireUserContext(await contextFromHeaders(getRequestHeaders())), data),
   )
 
 export const listMyDocuments = createServerFn({ method: 'GET' })

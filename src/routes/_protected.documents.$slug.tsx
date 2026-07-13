@@ -1,6 +1,7 @@
 import { Link, Outlet, createFileRoute, notFound, useLocation } from '@tanstack/react-router'
 import { ChevronRight, Clock, Edit, Eye, Hash, Info, Trash2, UserRound } from 'lucide-react'
 import { useState, useTransition } from 'react'
+import { DocumentContent } from '~/components/document-content'
 import { TagPill } from '~/components/tag-pill'
 import { Button } from '~/components/ui/button'
 import {
@@ -132,11 +133,9 @@ function DocumentPage() {
                 </div>
               )}
 
-              <div
-                className="prose-docbase mt-6"
-                // biome-ignore lint/security/noDangerouslySetInnerHtml: document content is sanitized server-side.
-                dangerouslySetInnerHTML={{ __html: document.contentHtml }}
-              />
+              <div className="mt-6">
+                <DocumentContent html={document.contentHtml} />
+              </div>
             </article>
           </div>
         </main>
@@ -307,9 +306,7 @@ function DeleteDocumentButton({ documentId }: { documentId: string }) {
         <DialogContent className="max-w-lg gap-0 overflow-hidden p-0">
           <DialogHeader className="space-y-1.5 px-6 pt-5 pb-4">
             <DialogTitle>删除失败</DialogTitle>
-            <DialogDescription>
-              {errorMessage ?? '请稍后重试，或联系管理员。'}
-            </DialogDescription>
+            <DialogDescription>{errorMessage ?? '请稍后重试，或联系管理员。'}</DialogDescription>
           </DialogHeader>
           <DialogFooter className="border-t border-border bg-surface-muted/40 px-6 py-3">
             <Button type="button" size="sm" onClick={() => setErrorOpen(false)}>

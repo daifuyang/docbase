@@ -222,6 +222,68 @@ body {
   margin: 2em 0;
 }
 
+/* Tables — borders/spacing follow the Ant Design surface rhythm; the
+   subtotal/total rows are visually distinct so the aggregate numbers read
+   as the conclusion of the section rather than as new data. */
+.prose-docbase .doc-table,
+.tiptap .doc-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5em 0;
+  font-size: 0.95em;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+.prose-docbase .doc-table th,
+.prose-docbase .doc-table td,
+.tiptap .doc-table th,
+.tiptap .doc-table td {
+  border: 1px solid var(--color-border);
+  padding: 0.5em 0.75em;
+  text-align: left;
+  vertical-align: top;
+}
+.prose-docbase .doc-table thead th,
+.tiptap .doc-table thead th {
+  background: var(--color-surface-muted);
+  font-weight: 600;
+  color: var(--color-foreground);
+}
+.prose-docbase .doc-table tr[data-row-kind="subtotal"],
+.tiptap .doc-table tr[data-row-kind="subtotal"] {
+  background: color-mix(in oklch, var(--color-primary) 7%, transparent);
+  font-weight: 600;
+}
+.prose-docbase .doc-table tr[data-row-kind="subtotal"] td,
+.tiptap .doc-table tr[data-row-kind="subtotal"] td {
+  border-top: 2px solid color-mix(in oklch, var(--color-primary) 35%, var(--color-border));
+}
+.prose-docbase .doc-table tr[data-row-kind="total"],
+.tiptap .doc-table tr[data-row-kind="total"] {
+  background: color-mix(in oklch, var(--color-primary) 14%, transparent);
+  font-weight: 700;
+}
+.prose-docbase .doc-table tr[data-row-kind="total"] td,
+.tiptap .doc-table tr[data-row-kind="total"] td {
+  border-top: 2px solid var(--color-primary);
+}
+.prose-docbase .doc-table td[data-type="number"],
+.prose-docbase .doc-table td[data-computed],
+.tiptap .doc-table td[data-type="number"],
+.tiptap .doc-table td[data-computed] {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.prose-docbase .doc-table td[data-format="currency"],
+.tiptap .doc-table td[data-format="currency"] {
+  color: var(--color-accent-foreground);
+}
+.prose-docbase .doc-table td[data-format="percent"],
+.tiptap .doc-table td[data-format="percent"] {
+  color: var(--color-muted-foreground);
+}
+
 /* =============================================================================
    TipTap editor content (uses same prose rules as article view)
    ============================================================================= */

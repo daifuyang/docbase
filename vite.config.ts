@@ -6,7 +6,8 @@ import { defineConfig } from 'vite'
 import tsconfigPaths from 'vite-tsconfig-paths'
 
 export default defineConfig(({ command, mode }) => {
-  const nodeEnv = command === 'build' ? 'production' : mode === 'development' ? 'development' : 'production'
+  const nodeEnv =
+    command === 'build' ? 'production' : mode === 'development' ? 'development' : 'production'
   process.env.NODE_ENV ??= nodeEnv
 
   return {

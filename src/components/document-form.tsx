@@ -5,6 +5,7 @@ import { CheckCircle2, FileText, FolderOpen, Save, Send, Tags } from 'lucide-rea
 import type { ReactNode } from 'react'
 import { Suspense, lazy, useMemo, useState, useTransition } from 'react'
 import { TagInput } from '~/components/tag-input'
+import { freezeAggregates } from '~/lib/table-aggregate'
 import { cn } from '~/lib/utils'
 import { createDocument, updateDocument } from '~/server/documents'
 import type { CategorySummary, DocumentDetail, SpaceSummary, TipTapDoc } from '~/shared/types'
@@ -68,12 +69,21 @@ export function DocumentForm({
     if (!contentJson.content || contentJson.content.length === 0) return setError('请输入正文')
     if (!spaceId) return setError('请选择知识空间')
 
+    // Freeze aggregate numbers into the JSON so SSR/no-JS readers see the
+    // correct values. The editor itself never has to re-render them — the
+    // reading view will recompute on hydrate and overwrite via data-computed.
+    const frozenJson = freezeAggregates(contentJson) as TipTapDoc
+    const serializedSize = JSON.stringify(frozenJson).length
+    if (serializedSize > 200 * 1024) {
+      return setError('正文超过 200KB，无法保存')
+    }
+
     setPendingAction(status)
     startTransition(async () => {
       try {
         const payload = {
           title,
-          contentJson,
+          contentJson: frozenJson,
           tags,
           status,
           spaceId,
@@ -246,11 +256,7 @@ function EditorFallback() {
     <div className="rounded-md border border-input bg-background">
       <div className="flex flex-wrap gap-1 border-b border-border p-2">
         {Array.from({ length: 11 }).map((_, index) => (
-          <div
-            key={index}
-            className="h-8 w-8 rounded-md bg-surface-muted"
-            aria-hidden="true"
-          />
+          <div key={index} className="h-8 w-8 rounded-md bg-surface-muted" aria-hidden="true" />
         ))}
       </div>
       <div className="min-h-[320px] p-4">
