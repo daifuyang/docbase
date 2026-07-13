@@ -1,0 +1,59 @@
+# =============================================================================
+# DocBase — DB migration runner FC 3.0 deployment unit.
+#
+# A standalone service that runs drizzle-kit migrate against the
+# production Postgres. Triggered only by the GitHub Actions workflow
+# at `.github/workflows/migrate.yml` via `aliyun fc InvokeFunction`.
+# No HTTP trigger, no public endpoint.
+#
+# To deploy locally:
+#   pnpm deploy:migrate
+# To trigger migrations:
+#   GitHub repo → Actions → DB Migrate (Manual) → Run workflow
+# =============================================================================
+edition: 3.0.0
+name: docbase-migrate-deploy
+access: default
+
+vars:
+  region: cn-shanghai
+  serviceName: docbase-migrate
+  functionName: migrate-runner
+
+resources:
+  migrate-runner:
+    component: fc3
+    props:
+      region: ${vars.region}
+      serviceName: ${vars.serviceName}
+      functionName: ${vars.functionName}
+      description: DocBase DB migration runner (custom runtime, invoke-only)
+      runtime: custom.debian12
+      code: ./code
+      handler: not-used
+      timeout: 120
+      memorySize: 512
+      cpu: 0.5
+      diskSize: 512
+      instanceConcurrency: 1
+      internetAccess: false
+      customRuntimeConfig:
+        command:
+          - /code/bootstrap
+        port: 9000
+      logConfig:
+        project: docbase-fc-log
+        logstore: fc-log
+        enableInstanceMetrics: false
+        enableRequestMetrics: false
+      vpcConfig:
+        vpcId: ${env(VPC_ID)}
+        vSwitchIds:
+          - ${env(VSWITCH_ID)}
+        securityGroupId: ${env(SECURITY_GROUP_ID)}
+      environmentVariables:
+        NODE_ENV: production
+        PORT: '9000'
+        PATH: /var/fc/lang/nodejs22/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/sbin:/bin
+        DATABASE_URL: ${env(DATABASE_SUPERUSER_URL)}
+        LOG_LEVEL: info

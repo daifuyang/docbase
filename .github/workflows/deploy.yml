@@ -108,16 +108,14 @@ jobs:
       # ---------- (3) 构建 + 发布到 FC + smoke ----------
       # NOTE on DB migrations: GitHub Actions runners sit on the public
       # internet and cannot reach the production Postgres at its private
-      # VPC IP. We intentionally do NOT run `drizzle-kit migrate` here
-      # — it's never been wired up to a self-hosted runner that can
-      # cross the VPC boundary. Schema upgrades are applied by a
-      # privileged context: operator via aliyun RDS console, a
-      # self-hosted runner registered with `runs-on: self-hosted`, or
-      # an out-of-band `psql` against the owner role. The FC runtime
-      # role also lacks DDL, so `~/lib/migrate-on-boot.server.ts`
-      # short-circuits to a warning log when it hits a permission error
-      # — the container keeps serving traffic, and reads/writes against
-      # the missing column surface as 500s until the schema catches up.
+      # VPC IP. We intentionally do NOT run `drizzle-kit migrate` here.
+      # Schema upgrades live in `.github/workflows/migrate.yml`, which
+      # invokes a dedicated `docbase-migrate` FC function via aliyun CLI
+      # `InvokeFunction`. That function runs inside the production VPC
+      # with the PG superuser URL. Trigger it manually from the Actions
+      # tab before or after a deploy as needed; the two workflows are
+      # intentionally decoupled so a missing migration function doesn't
+      # block code deploys.
       - name: Build + deploy to FC + smoke
         run: |
           set -euo pipefail

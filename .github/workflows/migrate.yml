@@ -1,0 +1,115 @@
+name: DB Migrate (Manual)
+
+# =============================================================================
+# DocBase 生产数据库迁移（手动触发）。
+#
+# 流程：GitHub Actions runner 通过 aliyun CLI 的 `fc InvokeFunction` API
+# 调用 docbase-migrate FC 函数；该函数在生产 VPC 内、用 PG superuser
+# 凭证连 DB，跑 drizzle-kit migrate。
+#
+# 触发：仅 workflow_dispatch（手动），与 deploy.yml 完全解耦。
+# 凭证：ALIYUN_AK / ALIYUN_SK / ALIYUN_ACCOUNT_ID 已存在；
+#       DATABASE_SUPERUSER_URL 在本地部署时通过 fc-deploy-migrate/prod.env
+#       注入，函数运行时不需要 GitHub Secret 介入。
+# =============================================================================
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: migrate-docbase
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: invoke docbase-migrate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      DOCBASE_REGION: cn-shanghai
+      DOCBASE_SERVICE: docbase-migrate
+      DOCBASE_FUNCTION: migrate-runner
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+          ref: deploy
+
+      - name: Install aliyun CLI
+        run: npm install -g aliyun-cli
+
+      - name: Configure aliyun credentials
+        env:
+          ALIYUN_AK: ${{ secrets.ALIYUN_AK }}
+          ALIYUN_SK: ${{ secrets.ALIYUN_SK }}
+          ALIYUN_ACCOUNT_ID: ${{ secrets.ALIYUN_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          echo "AK=${ALIYUN_AK:0:4}***"
+          echo "ACCOUNT=${ALIYUN_ACCOUNT_ID:0:4}***"
+          ALIBABA_CLOUD_ACCESS_KEY_ID="$ALIYUN_AK" \
+            ALIBABA_CLOUD_ACCESS_KEY_SECRET="$ALIYUN_SK" \
+            ALIBABA_CLOUD_ACCOUNT_ID="$ALIYUN_ACCOUNT_ID" \
+            aliyun fc ListFunctions --region "$DOCBASE_REGION" --output json 2>&1 | head -5
+
+      - name: Resolve function
+        id: resolve
+        run: |
+          set -euo pipefail
+          EXISTS=$(aliyun fc GetFunction \
+            --region "$DOCBASE_REGION" \
+            --service-name "$DOCBASE_SERVICE" \
+            --function-name "$DOCBASE_FUNCTION" \
+            --output json 2>&1)
+          echo "$EXISTS" | head -c 800
+          echo
+          if echo "$EXISTS" | grep -q '"functionName"'; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Invoke migrate-runner
+        env:
+          ALIYUN_AK: ${{ secrets.ALIYUN_AK }}
+          ALIYUN_SK: ${{ secrets.ALIYUN_SK }}
+          ALIYUN_ACCOUNT_ID: ${{ secrets.ALIYUN_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          log() { printf '▶ %s\n' "$*"; }
+          if [ "${{ steps.resolve.outputs.ready }}" != "true" ]; then
+            echo "::error::$DOCBASE_SERVICE/$DOCBASE_FUNCTION not deployed yet. Run 'pnpm deploy:migrate' locally first."
+            exit 1
+          fi
+          log "invoking $DOCBASE_SERVICE/$DOCBASE_FUNCTION"
+          RESP=$(aliyun fc InvokeFunction \
+            --region "$DOCBASE_REGION" \
+            --service-name "$DOCBASE_SERVICE" \
+            --function-name "$DOCBASE_FUNCTION" \
+            --payload '{"trigger":"workflow_dispatch"}' \
+            --output json 2>&1)
+          echo "$RESP" | head -c 4000
+          echo
+          STATUS=$(echo "$RESP" | jq -r '.statusCode // .StatusCode // 500' 2>/dev/null || echo 500)
+          # `aliyun fc InvokeFunction` returns the function's HTTP-style
+          # statusCode in the JSON payload when invoked synchronously.
+          case "$STATUS" in
+            2*) log "✅ migrate succeeded (status=$STATUS)" ;;
+            *)
+              echo "::error::migrate failed (status=$STATUS)"
+              exit 1
+              ;;
+          esac
+
+      - name: Tail FC logs
+        if: always()
+        run: |
+          aliyun fc GetFunctionLog \
+            --region "$DOCBASE_REGION" \
+            --service-name "$DOCBASE_SERVICE" \
+            --function-name "$DOCBASE_FUNCTION" \
+            --limit 50 || true

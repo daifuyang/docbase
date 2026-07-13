@@ -159,17 +159,22 @@ LOG_LEVEL=info
 
 ## Workflow 接入
 
-`.github/workflows/deploy.yml` 的发布链路：
+`.github/workflows/deploy.yml` 是发版流水线（push to deploy 或手动触发），
+由 GitHub 托管 runner 跑，**不包含数据库迁移**——CI runner 在公网，连不到
+生产 VPC 私网 PG。
 
-1. 自托管 runner 加载 `env-config`。
-2. 内网连通性检查。
-3. 数据库迁移。
-4. 生成临时 `$RUNNER_TEMP/docbase-fc.env`，把 runner 环境变量映射成 `deploy-fc.sh` 需要的标准变量名。
-5. `bash scripts/deploy-fc.sh package` 生成 `fc-deploy/code/`。
-6. 证书续签流程单独执行；如果拿到了新的 PEM 文件，可再执行 `bash scripts/deploy-fc.sh domain-apply` 更新根目录 `s.yaml` 对应的 `fc3-domain`。
-7. `DOCBASE_SKIP_BUILD=1 bash scripts/deploy-fc.sh plan`。
-8. `DOCBASE_SKIP_BUILD=1 bash scripts/deploy-fc.sh apply`。
-9. 访问 `/api/health` 冒烟。
+数据库迁移在独立的子部署单元里：`fc-deploy-migrate/`（详见其 README），
+通过 `.github/workflows/migrate.yml` 手动触发。该 workflow 用 aliyun CLI
+的 `fc InvokeFunction` API 调用独立的 `docbase-migrate` FC 函数（位于
+生产 VPC 内，使用 PG superuser 凭证）。两个 workflow 解耦：
+
+- 发版 → push to deploy 触发 deploy.yml
+- 数据库变更 → Actions 标签页手动 Run workflow on migrate.yml
+  （前提：`pnpm deploy:migrate` 已本地执行一次把 docbase-migrate 函数推到 FC）
+
+关联 deploy.yml：deploy 不依赖 migrate 成功。如果 schema 没追上代码，
+`/api/health` 仍然 200（健康检查不依赖新表），但访问依赖新表的路径会 500，
+运维可以单独跑 migrate workflow 补救。
 
 ## 故障排查
 
