@@ -30,6 +30,7 @@ import {
   readEnvRuntimeConfig,
   readRuntimeConfig,
 } from '~/lib/runtime-config.server'
+import { ensureMigrationsApplied } from '~/lib/migrate-on-boot.server'
 import type { InstallConfigInput, InstallInput } from '~/shared/validation/install'
 
 export type InstallState = {
@@ -50,6 +51,10 @@ export async function getInstallGuardState(): Promise<
   Pick<InstallState, 'status' | 'hasConfig' | 'hasLock' | 'message'>
 > {
   if (isFcDeployMode()) {
+    // Block the first request until the boot-time migrator has had a
+    // chance to finish — otherwise we serve a "ready" guard while the
+    // schema is still out of date and every query 500s.
+    await ensureMigrationsApplied()
     return {
       status: 'ready',
       hasConfig: Boolean(readEnvRuntimeConfig()),
