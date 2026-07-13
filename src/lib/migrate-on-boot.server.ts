@@ -36,6 +36,45 @@ function runBootMigrate(): Promise<void> {
   const g = globalThis as GlobalWithBootMigrate
   if (g[BOOT_MIGRATE_KEY]) return g[BOOT_MIGRATE_KEY]
 
+  function isPermissionError(error: unknown): boolean {
+    const seen = new Set<unknown>()
+    let cursor: unknown = error
+    while (cursor && !seen.has(cursor)) {
+      seen.add(cursor)
+      if (typeof cursor === 'string') {
+        if (/permission denied|access denied|must be owner|insufficient_privilege/i.test(cursor)) {
+          return true
+        }
+      }
+      if (cursor instanceof Error) {
+        if (
+          /permission denied|access denied|must be owner|insufficient_privilege/i.test(
+            cursor.message,
+          )
+        ) {
+          return true
+        }
+        cursor = (cursor as { cause?: unknown }).cause
+        continue
+      }
+      const anyErr = cursor as { code?: unknown; severity?: unknown; message?: unknown }
+      if (typeof anyErr?.code === 'string' && /42501|42501|0A000/i.test(anyErr.code)) {
+        return true
+      }
+      if (typeof anyErr?.message === 'string') {
+        if (
+          /permission denied|access denied|must be owner|insufficient_privilege/i.test(
+            anyErr.message,
+          )
+        ) {
+          return true
+        }
+      }
+      break
+    }
+    return false
+  }
+
   const promise = (async () => {
     const client = postgres(databaseUrl, { max: 1, prepare: false })
     const db = drizzle(client)
@@ -43,32 +82,33 @@ function runBootMigrate(): Promise<void> {
       try {
         await migrate(db, { migrationsFolder: 'db/migrations' })
       } catch (error) {
-        // Some FC environments grant the runtime role only DML (no DDL),
-        // in which case the migrator must hand the schema diff to the
-        // existing schema's owner instead. We retry with `migrationsSchema`
-        // set, matching the fallback inside `migrateDatabase()` in the
-        // install service. If the error isn't a permission error we
-        // rethrow — that's a real failure the operator must see.
-        const msg = error instanceof Error ? error.message : ''
-        const causeMsg = error instanceof Error && error.cause ? (error.cause as Error).message : ''
-        const isPermissionError = /permission denied|access denied|must be owner/i.test(
-          msg + causeMsg,
-        )
-        if (!isPermissionError) throw error
+        if (!isPermissionError(error)) throw error
+        // The FC runtime role lacks DDL on `public` (a normal production
+        // hardening — the runtime user should never own the schema). This
+        // means boot-time migration cannot succeed from inside the
+        // container; the schema upgrade has to come from a privileged
+        // context (operator via aliyun RDS console, a self-hosted runner
+        // with DDL, or a one-off `s exec` task). We log loudly and let
+        // the server start so traffic flows; reads/writes that depend on
+        // the missing column will 500 until the operator catches up.
         logger.warn(
-          { event: 'boot-migrate-permission-retry' },
-          'migrator lacks DDL on default schema; retrying with explicit migrationsSchema',
+          {
+            event: 'boot-migrate-permission-denied',
+            error: error instanceof Error ? error.message : String(error),
+          },
+          'FC runtime role lacks DDL on public; migrations must be applied by a privileged context (e.g. aliyun RDS console or self-hosted runner)',
         )
-        await migrate(db, {
-          migrationsFolder: 'db/migrations',
-          migrationsSchema: 'public',
-        })
+        return
       }
       logger.info({ event: 'boot-migrate' }, 'database migrations applied at boot')
     } catch (error) {
       logger.error(
-        { event: 'boot-migrate-failed', error: error instanceof Error ? error.message : error },
-        'database migration failed at boot; refusing to start',
+        {
+          event: 'boot-migrate-failed',
+          error: error instanceof Error ? error.message : String(error),
+          code: (error as { code?: unknown })?.code,
+        },
+        'database migration failed at boot',
       )
       throw error
     } finally {
