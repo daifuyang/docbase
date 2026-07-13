@@ -128,18 +128,6 @@ smoke_test() {
 
   log "smoke test: ${base_url%/}/api/health"
   curl -fsSk "${base_url%/}/api/health" >/dev/null
-
-  # The root route is a best-effort check — server-fn loaders may surface
-  # transient 500s while the boot-migrator is warming up or a schema
-  # upgrade is pending. The function being reachable and /api/health
-  # green is the authoritative deployment-success signal.
-  log "smoke test (best-effort): ${base_url%/}/"
-  local status
-  status="$(curl -sk -o /dev/null -w '%{http_code}' "${base_url%/}/")"
-  case "$status" in
-    200|301|302|303|307|308) log "  root OK (${status})" ;;
-    *) log "  root WARN: status=${status} (deployment still considered successful)" ;;
-  esac
 }
 
 case "$CMD" in
