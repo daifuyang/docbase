@@ -40,7 +40,30 @@ function runBootMigrate(): Promise<void> {
     const client = postgres(databaseUrl, { max: 1, prepare: false })
     const db = drizzle(client)
     try {
-      await migrate(db, { migrationsFolder: 'db/migrations' })
+      try {
+        await migrate(db, { migrationsFolder: 'db/migrations' })
+      } catch (error) {
+        // Some FC environments grant the runtime role only DML (no DDL),
+        // in which case the migrator must hand the schema diff to the
+        // existing schema's owner instead. We retry with `migrationsSchema`
+        // set, matching the fallback inside `migrateDatabase()` in the
+        // install service. If the error isn't a permission error we
+        // rethrow — that's a real failure the operator must see.
+        const msg = error instanceof Error ? error.message : ''
+        const causeMsg = error instanceof Error && error.cause ? (error.cause as Error).message : ''
+        const isPermissionError = /permission denied|access denied|must be owner/i.test(
+          msg + causeMsg,
+        )
+        if (!isPermissionError) throw error
+        logger.warn(
+          { event: 'boot-migrate-permission-retry' },
+          'migrator lacks DDL on default schema; retrying with explicit migrationsSchema',
+        )
+        await migrate(db, {
+          migrationsFolder: 'db/migrations',
+          migrationsSchema: 'public',
+        })
+      }
       logger.info({ event: 'boot-migrate' }, 'database migrations applied at boot')
     } catch (error) {
       logger.error(
