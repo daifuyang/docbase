@@ -44,7 +44,9 @@ describe('documents service layer', () => {
           role: 'admin',
         })
         .returning()
-      ctx.userId = users[0]!.id
+      const newUser = users[0]
+      if (!newUser) throw new Error('Failed to create test user')
+      ctx.userId = newUser.id
     } else {
       ctx.userId = testUser.id
     }
@@ -66,7 +68,9 @@ describe('documents service layer', () => {
           createdBy: ctx.userId,
         })
         .returning()
-      spaceId = spaces[0]!.id
+      const newSpace = spaces[0]
+      if (!newSpace) throw new Error('Failed to create test space')
+      spaceId = newSpace.id
     }
   })
 
