@@ -31,11 +31,9 @@ describe('documents service layer', () => {
     const testUser = await db.query.user.findFirst({
       where: eq(schema.user.username, 'svc_test_user'),
     })
-    if (testUser) {
-      ctx.userId = testUser.id
-    } else {
+    if (!testUser) {
       const testUserId = `test-user-${Date.now()}`
-      const [user] = await db
+      const users = await db
         .insert(schema.user)
         .values({
           id: testUserId,
@@ -46,16 +44,20 @@ describe('documents service layer', () => {
           role: 'admin',
         })
         .returning()
-      ctx.userId = user.id
+      ctx.userId = users[0]!.id
+    } else {
+      ctx.userId = testUser.id
     }
 
     // Create test space if not exists
-    let space = await db.query.space.findFirst({
+    const existingSpace = await db.query.space.findFirst({
       where: eq(schema.space.name, 'Test Service Space'),
     })
-    if (!space) {
+    if (existingSpace) {
+      spaceId = existingSpace.id
+    } else {
       const slug = `test-service-space-${Date.now()}`
-      ;[space] = await db
+      const spaces = await db
         .insert(schema.space)
         .values({
           name: 'Test Service Space',
@@ -64,8 +66,8 @@ describe('documents service layer', () => {
           createdBy: ctx.userId,
         })
         .returning()
+      spaceId = spaces[0]!.id
     }
-    spaceId = space.id
   })
 
   afterAll(async () => {
