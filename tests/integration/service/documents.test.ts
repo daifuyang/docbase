@@ -27,15 +27,36 @@ describe('documents service layer', () => {
   let publishedDocId: string
 
   beforeAll(async () => {
-    // Use the seeded admin user so we have a real `user` row.
-    const admin = await db.query.user.findFirst({ where: eq(schema.user.username, 'admin') })
-    if (!admin) throw new Error('seed admin user missing — run `pnpm db:seed` first')
-    ctx.userId = admin.id
+    // Create test user if not exists
+    const testUser = await db.query.user.findFirst({ where: eq(schema.user.username, 'svc_test_user') })
+    if (testUser) {
+      ctx.userId = testUser.id
+    } else {
+      const testUserId = `test-user-${Date.now()}`
+      const [user] = await db.insert(schema.user).values({
+        id: testUserId,
+        username: 'svc_test_user',
+        email: 'svc_test@test.local',
+        displayName: 'Test User',
+        name: 'Test User',
+        role: 'admin',
+      }).returning()
+      ctx.userId = user.id
+    }
 
-    const space = await db.query.space.findFirst({
-      where: eq(schema.space.name, '工程知识库'),
+    // Create test space if not exists
+    let space = await db.query.space.findFirst({
+      where: eq(schema.space.name, 'Test Service Space'),
     })
-    if (!space) throw new Error('seed space "工程知识库" missing — run `pnpm db:seed` first')
+    if (!space) {
+      const slug = `test-service-space-${Date.now()}`
+      ;[space] = await db.insert(schema.space).values({
+        name: 'Test Service Space',
+        slug,
+        description: 'Test space for service layer tests',
+        createdBy: ctx.userId,
+      }).returning()
+    }
     spaceId = space.id
   })
 
