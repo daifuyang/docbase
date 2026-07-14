@@ -14,7 +14,8 @@
       "package.json",
       ".specify",
       "scripts",
-      "src/routeTree.gen.ts"
+      "src/routeTree.gen.ts",
+      "seed-admin.mts"
     ]
   },
   "formatter": {
@@ -41,7 +42,8 @@
       },
       "suspicious": {
         "noExplicitAny": "warn",
-        "noConsole": { "level": "warn", "options": { "allow": ["warn", "error"] } }
+        "noConsole": { "level": "warn", "options": { "allow": ["warn", "error"] } },
+        "noArrayIndexKey": "off"
       },
       "complexity": {
         "noBannedTypes": "error"

@@ -256,7 +256,11 @@ function EditorFallback() {
     <div className="rounded-md border border-input bg-background">
       <div className="flex flex-wrap gap-1 border-b border-border p-2">
         {Array.from({ length: 11 }).map((_, index) => (
-          <div key={index} className="h-8 w-8 rounded-md bg-surface-muted" aria-hidden="true" />
+          <div
+            key={`skeleton-${index}`}
+            className="h-8 w-8 rounded-md bg-surface-muted"
+            aria-hidden="true"
+          />
         ))}
       </div>
       <div className="min-h-[320px] p-4">

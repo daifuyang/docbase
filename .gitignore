@@ -66,3 +66,8 @@ drizzle/
 .codex/
 skills-lock.json
 .claude/skills/skill-creator
+
+# Broken symlinks to local skill paths
+.claude/skills/docbase-restish
+.claude/skills/docbase-openapi-standard
+.opencode/
