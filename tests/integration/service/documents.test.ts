@@ -28,19 +28,24 @@ describe('documents service layer', () => {
 
   beforeAll(async () => {
     // Create test user if not exists
-    const testUser = await db.query.user.findFirst({ where: eq(schema.user.username, 'svc_test_user') })
+    const testUser = await db.query.user.findFirst({
+      where: eq(schema.user.username, 'svc_test_user'),
+    })
     if (testUser) {
       ctx.userId = testUser.id
     } else {
       const testUserId = `test-user-${Date.now()}`
-      const [user] = await db.insert(schema.user).values({
-        id: testUserId,
-        username: 'svc_test_user',
-        email: 'svc_test@test.local',
-        displayName: 'Test User',
-        name: 'Test User',
-        role: 'admin',
-      }).returning()
+      const [user] = await db
+        .insert(schema.user)
+        .values({
+          id: testUserId,
+          username: 'svc_test_user',
+          email: 'svc_test@test.local',
+          displayName: 'Test User',
+          name: 'Test User',
+          role: 'admin',
+        })
+        .returning()
       ctx.userId = user.id
     }
 
@@ -50,12 +55,15 @@ describe('documents service layer', () => {
     })
     if (!space) {
       const slug = `test-service-space-${Date.now()}`
-      ;[space] = await db.insert(schema.space).values({
-        name: 'Test Service Space',
-        slug,
-        description: 'Test space for service layer tests',
-        createdBy: ctx.userId,
-      }).returning()
+      ;[space] = await db
+        .insert(schema.space)
+        .values({
+          name: 'Test Service Space',
+          slug,
+          description: 'Test space for service layer tests',
+          createdBy: ctx.userId,
+        })
+        .returning()
     }
     spaceId = space.id
   })
