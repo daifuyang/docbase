@@ -57,6 +57,12 @@ jobs:
       - name: Run database migrations
         run: pnpm db:migrate
 
+      - name: Create test config
+        run: |
+          mkdir -p config
+          echo '{"databaseUrl":"postgres://docbase:docbase@localhost:5432/docbase_test","redisUrl":"redis://localhost:6379","betterAuthSecret":"ci_test_secret_replace_in_production_minimum_32","betterAuthUrl":"http://localhost:3000","publicAppUrl":"http://localhost:3000"}' > config/docbase.config.json
+          touch config/install.lock
+
       - name: Lint
         run: pnpm lint:check
 
