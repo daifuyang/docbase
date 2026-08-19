@@ -130,6 +130,24 @@ export const docbaseOpenApiSpec = {
           categoryId: { type: 'string', format: 'uuid', nullable: true },
         },
       },
+      ImportMarkdownDocument: {
+        type: 'object',
+        required: ['title', 'markdown', 'spaceId'],
+        properties: {
+          title: { type: 'string', minLength: 1, maxLength: 200 },
+          markdown: { type: 'string', minLength: 1 },
+          status: { type: 'string', enum: ['draft', 'published'], default: 'draft' },
+          spaceId: { type: 'string', format: 'uuid' },
+          categoryId: { type: 'string', format: 'uuid', nullable: true },
+          tags: { type: 'array', items: { type: 'string' }, maxItems: 10 },
+        },
+      },
+      ImportMarkdownResponse: {
+        type: 'object',
+        properties: {
+          document: { $ref: '#/components/schemas/DocumentDetail' },
+        },
+      },
     },
   },
   paths: {
@@ -170,6 +188,38 @@ export const docbaseOpenApiSpec = {
           },
         },
         responses: { '201': { description: 'Created' } },
+      },
+    },
+    '/api/v1/documents/import-md': {
+      post: {
+        operationId: 'documents.importMarkdown',
+        tags: ['documents'],
+        summary: 'Create a document from a Markdown source',
+        description:
+          'Accepts a Markdown string and converts it server-side to a TipTap document, ' +
+          'then persists it through the same code path as `documents.create`. The response ' +
+          'envelope is identical to `documents.create` so existing clients can consume it ' +
+          'without branching.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ImportMarkdownDocument' },
+            },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'Created',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ImportMarkdownResponse' },
+              },
+            },
+          },
+          '400': { description: 'Invalid Markdown payload' },
+          '404': { description: 'Space or category not found' },
+        },
       },
     },
     '/api/v1/documents/{slug}': {

@@ -35,6 +35,7 @@ import { Route as ProtectedDocumentsNewRouteImport } from './routes/_protected.d
 import { Route as ProtectedDocumentsSlugRouteImport } from './routes/_protected.documents.$slug'
 import { Route as ApiV1SpacesTreeRouteImport } from './routes/api/v1/spaces.tree'
 import { Route as ApiV1QuickNotesIdRouteImport } from './routes/api/v1/quick-notes.$id'
+import { Route as ApiV1DocumentsImportMdRouteImport } from './routes/api/v1/documents.import-md'
 import { Route as ApiV1DocumentsSlugRouteImport } from './routes/api/v1/documents.$slug'
 import { Route as ProtectedDocumentsSlugEditRouteImport } from './routes/_protected.documents.$slug.edit'
 import { Route as ApiV1QuickNotesIdPromoteRouteImport } from './routes/api/v1/quick-notes.$id.promote'
@@ -168,6 +169,11 @@ const ApiV1QuickNotesIdRoute = ApiV1QuickNotesIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => ApiV1QuickNotesRoute,
 } as any)
+const ApiV1DocumentsImportMdRoute = ApiV1DocumentsImportMdRouteImport.update({
+  id: '/import-md',
+  path: '/import-md',
+  getParentRoute: () => ApiV1DocumentsRoute,
+} as any)
 const ApiV1DocumentsSlugRoute = ApiV1DocumentsSlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
@@ -212,6 +218,7 @@ export interface FileRoutesByFullPath {
   '/api/v1/tags': typeof ApiV1TagsRoute
   '/documents/$slug/edit': typeof ProtectedDocumentsSlugEditRoute
   '/api/v1/documents/$slug': typeof ApiV1DocumentsSlugRoute
+  '/api/v1/documents/import-md': typeof ApiV1DocumentsImportMdRoute
   '/api/v1/quick-notes/$id': typeof ApiV1QuickNotesIdRouteWithChildren
   '/api/v1/spaces/tree': typeof ApiV1SpacesTreeRoute
   '/api/v1/quick-notes/$id/promote': typeof ApiV1QuickNotesIdPromoteRoute
@@ -242,6 +249,7 @@ export interface FileRoutesByTo {
   '/api/v1/tags': typeof ApiV1TagsRoute
   '/documents/$slug/edit': typeof ProtectedDocumentsSlugEditRoute
   '/api/v1/documents/$slug': typeof ApiV1DocumentsSlugRoute
+  '/api/v1/documents/import-md': typeof ApiV1DocumentsImportMdRoute
   '/api/v1/quick-notes/$id': typeof ApiV1QuickNotesIdRouteWithChildren
   '/api/v1/spaces/tree': typeof ApiV1SpacesTreeRoute
   '/api/v1/quick-notes/$id/promote': typeof ApiV1QuickNotesIdPromoteRoute
@@ -274,6 +282,7 @@ export interface FileRoutesById {
   '/api/v1/tags': typeof ApiV1TagsRoute
   '/_protected/documents/$slug/edit': typeof ProtectedDocumentsSlugEditRoute
   '/api/v1/documents/$slug': typeof ApiV1DocumentsSlugRoute
+  '/api/v1/documents/import-md': typeof ApiV1DocumentsImportMdRoute
   '/api/v1/quick-notes/$id': typeof ApiV1QuickNotesIdRouteWithChildren
   '/api/v1/spaces/tree': typeof ApiV1SpacesTreeRoute
   '/api/v1/quick-notes/$id/promote': typeof ApiV1QuickNotesIdPromoteRoute
@@ -306,6 +315,7 @@ export interface FileRouteTypes {
     | '/api/v1/tags'
     | '/documents/$slug/edit'
     | '/api/v1/documents/$slug'
+    | '/api/v1/documents/import-md'
     | '/api/v1/quick-notes/$id'
     | '/api/v1/spaces/tree'
     | '/api/v1/quick-notes/$id/promote'
@@ -336,6 +346,7 @@ export interface FileRouteTypes {
     | '/api/v1/tags'
     | '/documents/$slug/edit'
     | '/api/v1/documents/$slug'
+    | '/api/v1/documents/import-md'
     | '/api/v1/quick-notes/$id'
     | '/api/v1/spaces/tree'
     | '/api/v1/quick-notes/$id/promote'
@@ -367,6 +378,7 @@ export interface FileRouteTypes {
     | '/api/v1/tags'
     | '/_protected/documents/$slug/edit'
     | '/api/v1/documents/$slug'
+    | '/api/v1/documents/import-md'
     | '/api/v1/quick-notes/$id'
     | '/api/v1/spaces/tree'
     | '/api/v1/quick-notes/$id/promote'
@@ -575,6 +587,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiV1QuickNotesIdRouteImport
       parentRoute: typeof ApiV1QuickNotesRoute
     }
+    '/api/v1/documents/import-md': {
+      id: '/api/v1/documents/import-md'
+      path: '/import-md'
+      fullPath: '/api/v1/documents/import-md'
+      preLoaderRoute: typeof ApiV1DocumentsImportMdRouteImport
+      parentRoute: typeof ApiV1DocumentsRoute
+    }
     '/api/v1/documents/$slug': {
       id: '/api/v1/documents/$slug'
       path: '/$slug'
@@ -641,10 +660,12 @@ const ProtectedRouteWithChildren = ProtectedRoute._addFileChildren(
 
 interface ApiV1DocumentsRouteChildren {
   ApiV1DocumentsSlugRoute: typeof ApiV1DocumentsSlugRoute
+  ApiV1DocumentsImportMdRoute: typeof ApiV1DocumentsImportMdRoute
 }
 
 const ApiV1DocumentsRouteChildren: ApiV1DocumentsRouteChildren = {
   ApiV1DocumentsSlugRoute: ApiV1DocumentsSlugRoute,
+  ApiV1DocumentsImportMdRoute: ApiV1DocumentsImportMdRoute,
 }
 
 const ApiV1DocumentsRouteWithChildren = ApiV1DocumentsRoute._addFileChildren(

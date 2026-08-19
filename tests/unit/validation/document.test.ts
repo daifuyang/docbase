@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   createDocumentSchema,
+  importMarkdownSchema,
   searchDocumentsSchema,
   updateDocumentSchema,
 } from '~/shared/validation/document'
@@ -42,5 +43,44 @@ describe('document validation', () => {
   it('preserves status filters when searching documents', () => {
     const result = searchDocumentsSchema.parse({ status: 'draft', page: 1, pageSize: 5 })
     expect(result.status).toBe('draft')
+  })
+
+  it('accepts a valid markdown import payload', () => {
+    const result = importMarkdownSchema.safeParse({
+      title: '从 Markdown 导入',
+      markdown: '# 标题\n\n正文 **加粗** 内容。',
+      spaceId: uuid,
+    })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.status).toBe('draft')
+      expect(result.data.tags).toEqual([])
+    }
+  })
+
+  it('rejects markdown import without a spaceId', () => {
+    const result = importMarkdownSchema.safeParse({
+      title: '孤立的导入',
+      markdown: 'no space provided',
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('caps import titles at 200 characters', () => {
+    const result = importMarkdownSchema.safeParse({
+      title: 'a'.repeat(201),
+      markdown: '# t',
+      spaceId: uuid,
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('requires non-empty markdown for import', () => {
+    const result = importMarkdownSchema.safeParse({
+      title: '空文档',
+      markdown: '',
+      spaceId: uuid,
+    })
+    expect(result.success).toBe(false)
   })
 })

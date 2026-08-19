@@ -12,6 +12,8 @@ export const tiptapDocSchema = z
 
 export const titleSchema = z.string().min(1, '请输入标题').max(50, '标题最多 50 个字符')
 
+export const longTitleSchema = z.string().min(1, '请输入标题').max(200, '标题最多 200 个字符')
+
 export const tagNameSchema = z
   .string()
   .min(1)
@@ -33,6 +35,15 @@ export const createDocumentSchema = z.object({
   status: documentStatusSchema,
   spaceId: z.string().uuid('请选择知识空间'),
   categoryId: z.string().uuid('请选择分类').nullable().optional(),
+})
+
+export const importMarkdownSchema = z.object({
+  title: longTitleSchema,
+  markdown: z.string().min(1, '请输入 Markdown 内容'),
+  status: documentStatusSchema.default('draft'),
+  spaceId: z.string().uuid('请选择知识空间'),
+  categoryId: z.string().uuid('请选择分类').nullable().optional(),
+  tags: tagsArraySchema,
 })
 
 export const updateDocumentSchema = z
@@ -90,3 +101,4 @@ export const linkUrlSchema = z
 
 export type CreateDocumentInput = z.infer<typeof createDocumentSchema>
 export type UpdateDocumentInput = z.infer<typeof updateDocumentSchema>
+export type ImportMarkdownInput = z.infer<typeof importMarkdownSchema>

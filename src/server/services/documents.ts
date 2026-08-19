@@ -3,12 +3,17 @@ import { and, asc, desc, eq, ilike, or, sql } from 'drizzle-orm'
 import * as schema from '~/../db/schema'
 import { db } from '~/lib/db.server'
 import { Errors } from '~/lib/errors'
+import { markdownToTipTap } from '~/lib/md-to-tiptap'
 import { rateLimit } from '~/lib/rate-limit.server'
 import { redis, withPrefix } from '~/lib/redis.server'
 import { slugify, withSuffix } from '~/lib/slug.server'
 import { renderTiptapToHtml } from '~/lib/tiptap.server'
 import type { DocumentDetail, DocumentSummary, PaginatedResponse, TipTapDoc } from '~/shared/types'
-import type { CreateDocumentInput, UpdateDocumentInput } from '~/shared/validation/document'
+import type {
+  CreateDocumentInput,
+  ImportMarkdownInput,
+  UpdateDocumentInput,
+} from '~/shared/validation/document'
 import { searchDocumentsSchema } from '~/shared/validation/document'
 import type { ServiceContext } from './context'
 
@@ -58,11 +63,70 @@ export async function createDocumentService(
   if (!rl.allowed) throw Errors.rateLimited(rl.resetAt)
 
   const contentJson = normalizeDocumentContent(input.title, input.contentJson)
-  const baseSlug = slugify(input.title)
+  return insertDocumentAndReturnDetail(ctx, {
+    title: input.title,
+    contentJson,
+    status: input.status,
+    spaceId: input.spaceId,
+    categoryId: input.categoryId ?? null,
+    tags: input.tags,
+  })
+}
+
+/**
+ * Import a Markdown source as a new document.
+ *
+ * Behaviour mirrors `createDocumentService`: same rate-limit bucket, same
+ * slug uniqueness logic, same response envelope. The only difference is
+ * that the body is parsed from Markdown into a TipTap doc via
+ * {@link markdownToTipTap} before persistence.
+ */
+export async function importMarkdownService(
+  ctx: ServiceContext,
+  input: ImportMarkdownInput,
+): Promise<{ document: DocumentDetail }> {
+  const rl = await rateLimit('documents:create', ctx.userId, 10, 60)
+  if (!rl.allowed) throw Errors.rateLimited(rl.resetAt)
+
+  let contentJson: TipTapDoc
+  try {
+    contentJson = markdownToTipTap(input.markdown)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '无法解析 Markdown 内容'
+    throw Errors.validation(message)
+  }
+
+  return insertDocumentAndReturnDetail(ctx, {
+    title: input.title,
+    contentJson,
+    status: input.status,
+    spaceId: input.spaceId,
+    categoryId: input.categoryId ?? null,
+    tags: input.tags,
+  })
+}
+
+/**
+ * Shared insert + tag sync + cache invalidation path used by both
+ * `createDocumentService` and `importMarkdownService`. Returns the same
+ * `{ document }` envelope that consumers already understand.
+ */
+async function insertDocumentAndReturnDetail(
+  ctx: ServiceContext,
+  args: {
+    title: string
+    contentJson: TipTapDoc
+    status: 'draft' | 'published'
+    spaceId: string
+    categoryId: string | null
+    tags: string[]
+  },
+): Promise<{ document: DocumentDetail }> {
+  const baseSlug = slugify(args.title)
   let finalSlug = baseSlug
   for (let suffix = 2; ; suffix++) {
     const existing = await db.query.document.findFirst({
-      where: and(eq(schema.document.spaceId, input.spaceId), eq(schema.document.slug, finalSlug)),
+      where: and(eq(schema.document.spaceId, args.spaceId), eq(schema.document.slug, finalSlug)),
     })
     if (!existing) break
     finalSlug = withSuffix(baseSlug, suffix)
@@ -73,19 +137,19 @@ export async function createDocumentService(
     .values({
       authorId: ctx.userId,
       lastEditorId: ctx.userId,
-      spaceId: input.spaceId,
-      categoryId: input.categoryId ?? null,
-      title: input.title,
+      spaceId: args.spaceId,
+      categoryId: args.categoryId,
+      title: args.title,
       slug: finalSlug,
-      contentJson,
-      excerpt: extractExcerpt(contentJson),
-      status: input.status,
-      publishedAt: input.status === 'published' ? new Date() : null,
+      contentJson: args.contentJson,
+      excerpt: extractExcerpt(args.contentJson),
+      status: args.status,
+      publishedAt: args.status === 'published' ? new Date() : null,
     })
     .returning()
   if (!documentRow) throw Errors.internal('文档创建失败')
 
-  await replaceDocumentTags(documentRow.id, input.tags)
+  await replaceDocumentTags(documentRow.id, args.tags)
   await redis.del(withPrefix('cache:documents:list:*')).catch(() => {})
 
   const detail = await readDocumentDetailBySlugService(ctx, { slug: finalSlug })
