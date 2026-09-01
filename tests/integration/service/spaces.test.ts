@@ -113,7 +113,9 @@ describe('spaces + categories service layer', () => {
     expect(result.category.id).toBe(categoryId)
     expect(result.category.spaceId).toBe(targetSpaceId)
 
-    const reloadedDoc = await db.query.document.findFirst({ where: eq(schema.document.id, documentId) })
+    const reloadedDoc = await db.query.document.findFirst({
+      where: eq(schema.document.id, documentId),
+    })
     expect(reloadedDoc?.spaceId).toBe(targetSpaceId)
     expect(reloadedDoc?.categoryId).toBe(categoryId)
   })
