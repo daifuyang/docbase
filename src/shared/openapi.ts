@@ -249,6 +249,11 @@ export const docbaseOpenApiSpec = {
         operationId: 'documents.update',
         tags: ['documents'],
         summary: 'Update a document by slug',
+        description:
+          'Slugs are unique per (spaceId, slug) pair, so two documents in different ' +
+          'spaces may share the same slug. When they do, this endpoint only reaches ' +
+          'whichever row the database returns first — for unambiguous addressing use ' +
+          '`/api/v1/documents/{id}`.',
         parameters: [{ name: 'slug', in: 'path', required: true, schema: { type: 'string' } }],
         requestBody: {
           required: true,
@@ -264,6 +269,47 @@ export const docbaseOpenApiSpec = {
         summary: 'Delete a document by slug',
         parameters: [{ name: 'slug', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { '200': { description: 'Deleted' } },
+      },
+    },
+    '/api/v1/documents/{id}': {
+      patch: {
+        operationId: 'documents.updateById',
+        tags: ['documents'],
+        summary: 'Update a document by id',
+        description:
+          'ID-addressed counterpart to the slug-based PATCH. Use this when two ' +
+          'documents share a slug and the slug path cannot disambiguate them. The ' +
+          'request body is identical, except `id` is already supplied by the path.',
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': { schema: { $ref: '#/components/schemas/UpdateDocument' } },
+          },
+        },
+        responses: {
+          '200': { description: 'Updated' },
+          '400': { description: 'Validation error' },
+          '401': { description: 'Unauthenticated' },
+          '403': { description: 'Not the document author' },
+          '404': { description: 'Document not found' },
+        },
+      },
+      delete: {
+        operationId: 'documents.deleteById',
+        tags: ['documents'],
+        summary: 'Delete a document by id',
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          '200': { description: 'Deleted' },
+          '401': { description: 'Unauthenticated' },
+          '403': { description: 'Not the document author' },
+          '404': { description: 'Document not found' },
+        },
       },
     },
     '/api/v1/spaces': {
