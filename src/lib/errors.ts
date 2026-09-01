@@ -33,6 +33,8 @@ export const Errors = {
   notFound: (msg = '资源不存在') => createServerError('NOT_FOUND', 404, msg),
   emailTaken: () => createServerError('EMAIL_TAKEN', 409, '该邮箱已被注册'),
   usernameTaken: () => createServerError('USERNAME_TAKEN', 409, '该用户名已被占用'),
+  conflict: (msg = '资源状态冲突', details?: unknown) =>
+    createServerError('CONFLICT', 409, msg, details),
   invalidCredentials: () => createServerError('INVALID_CREDENTIALS', 401, '账号或密码错误'),
   weakPassword: () => createServerError('WEAK_PASSWORD', 400, '密码至少需要 8 位字符'),
   invalidEmail: () => createServerError('INVALID_EMAIL', 400, '邮箱格式不正确'),

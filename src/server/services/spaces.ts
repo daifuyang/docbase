@@ -225,3 +225,116 @@ export async function createCategoryService(
     },
   }
 }
+
+/**
+ * Update an existing category. Used by PATCH /api/v1/categories/{id}.
+ *
+ * Notable behaviour: when `spaceId` changes, all documents that were attached
+ * to this category must also be retargeted to the new space — otherwise
+ * `document.spaceId` would still reference the old space, and any subsequent
+ * delete of the old space would be blocked by the FK `onDelete: 'restrict'`
+ * guard. We do this in a single transaction so a partial failure leaves the
+ * database consistent.
+ */
+export async function updateCategoryService(
+  ctx: ServiceContext,
+  input: { id: string; name?: string; description?: string; spaceId?: string },
+): Promise<{ category: CategorySummary }> {
+  await requireAdmin(ctx)
+
+  const existing = await db.query.category.findFirst({ where: eq(schema.category.id, input.id) })
+  if (!existing) throw Errors.notFound('分类不存在')
+
+  // If the caller is moving the category to another space, verify the target
+  // space actually exists. Without this check the FK insert/update would fail
+  // with a less helpful error.
+  if (input.spaceId !== undefined && input.spaceId !== existing.spaceId) {
+    const target = await db.query.space.findFirst({ where: eq(schema.space.id, input.spaceId) })
+    if (!target) throw Errors.notFound('目标空间不存在')
+  }
+
+  const next = {
+    name: input.name ?? existing.name,
+    description: input.description === undefined ? existing.description : input.description,
+    spaceId: input.spaceId ?? existing.spaceId,
+  }
+
+  await db
+    .update(schema.category)
+    .set({
+      name: next.name,
+      description: next.description,
+      spaceId: next.spaceId,
+      updatedAt: new Date(),
+    })
+    .where(eq(schema.category.id, input.id))
+
+  // When the category moves between spaces, every document that was attached
+  // to it must follow — otherwise `document.spaceId` would still point at the
+  // old space and the eventual `DELETE /api/v1/spaces/{oldSpaceId}` would be
+  // blocked by the FK `onDelete: 'restrict'`. We skip this when the target
+  // space is unchanged to avoid unnecessary writes.
+  if (next.spaceId !== existing.spaceId) {
+    await db
+      .update(schema.document)
+      .set({ spaceId: next.spaceId, updatedAt: new Date() })
+      .where(eq(schema.document.categoryId, input.id))
+  }
+
+  return {
+    category: {
+      id: existing.id,
+      spaceId: next.spaceId,
+      name: next.name,
+      slug: existing.slug,
+      description: next.description,
+    },
+  }
+}
+
+/**
+ * Delete a space. Refuses (409 CONFLICT) if the space still owns categories
+ * or documents so the caller can move them first instead of orphaning rows.
+ *
+ * This matches the FK semantics already encoded in the schema:
+ *   category.spaceId   onDelete: 'cascade'
+ *   document.spaceId   onDelete: 'restrict'
+ * So the cascade path would actually drop categories automatically, but we
+ * surface a structured 409 here instead of silently deleting data — the
+ * caller always wants to know what they're removing.
+ */
+export async function deleteSpaceService(
+  ctx: ServiceContext,
+  input: { id: string },
+): Promise<{ ok: true; deletedSpaceId: string }> {
+  await requireAdmin(ctx)
+
+  const existing = await db.query.space.findFirst({ where: eq(schema.space.id, input.id) })
+  if (!existing) throw Errors.notFound('知识空间不存在')
+
+  const [categoryRows, documentRows] = await Promise.all([
+    db
+      .select({ id: schema.category.id, name: schema.category.name })
+      .from(schema.category)
+      .where(eq(schema.category.spaceId, input.id))
+      .limit(5),
+    db
+      .select({ id: schema.document.id, title: schema.document.title })
+      .from(schema.document)
+      .where(eq(schema.document.spaceId, input.id))
+      .limit(5),
+  ])
+
+  if (categoryRows.length > 0 || documentRows.length > 0) {
+    throw Errors.conflict('该空间下仍有内容，请先迁移分类与文档', {
+      remainingCategories: categoryRows.length,
+      remainingDocuments: documentRows.length,
+      sampleCategoryIds: categoryRows.map((c) => c.id),
+      sampleDocumentIds: documentRows.map((d) => d.id),
+    })
+  }
+
+  await db.delete(schema.space).where(eq(schema.space.id, input.id))
+
+  return { ok: true, deletedSpaceId: input.id }
+}

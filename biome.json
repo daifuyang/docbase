@@ -15,7 +15,8 @@
       ".specify",
       "scripts",
       "src/routeTree.gen.ts",
-      "seed-admin.mts"
+      "seed-admin.mts",
+      ".dsh-meow"
     ]
   },
   "formatter": {
