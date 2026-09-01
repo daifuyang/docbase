@@ -71,3 +71,6 @@ skills-lock.json
 .claude/skills/docbase-restish
 .claude/skills/docbase-openapi-standard
 .opencode/
+
+# Transient artifacts (preview renders, debug dumps)
+tmp/

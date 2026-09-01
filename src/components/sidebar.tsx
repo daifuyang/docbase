@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useEffect, useMemo, useState, useTransition } from 'react'
+import { groupSpaces } from '~/lib/space-groups'
 import { cn } from '~/lib/utils'
 import { updateNavigationTreeState } from '~/server/spaces'
 import type { SpaceTreeItem } from '~/shared/types'
@@ -102,14 +103,22 @@ export function SidebarContent({
               <span className="sr-only">新建文档</span>
             </Link>
           </div>
-          {spaces.map((space) => (
-            <TreeSpace
-              key={space.id}
-              space={space}
-              isOpen={openKeys.has(spaceKey(space.id))}
-              openKeys={openKeys}
-              onToggle={toggle}
-            />
+          {groupSpaces(spaces).map(({ group, spaces: spacesInGroup }) => (
+            <div key={group.key} className="space-y-1">
+              <div className="flex items-center gap-1.5 px-2 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
+                <group.icon className="h-3 w-3 text-muted-foreground/70" />
+                <span>{group.name}</span>
+              </div>
+              {spacesInGroup.map((space) => (
+                <TreeSpace
+                  key={space.id}
+                  space={space}
+                  isOpen={openKeys.has(spaceKey(space.id))}
+                  openKeys={openKeys}
+                  onToggle={toggle}
+                />
+              ))}
+            </div>
           ))}
         </nav>
       )}
