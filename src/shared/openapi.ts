@@ -148,6 +148,18 @@ export const docbaseOpenApiSpec = {
           document: { $ref: '#/components/schemas/DocumentDetail' },
         },
       },
+      UpdateCategory: {
+        type: 'object',
+        description:
+          'Partial update for a category. At least one field must be provided. ' +
+          'Changing `spaceId` cascades: every document currently attached to the category ' +
+          'is retargeted to the new space so the foreign key stays consistent.',
+        properties: {
+          name: { type: 'string', minLength: 1, maxLength: 60 },
+          description: { type: 'string', maxLength: 200, nullable: true },
+          spaceId: { type: 'string', format: 'uuid' },
+        },
+      },
     },
   },
   paths: {
@@ -291,6 +303,47 @@ export const docbaseOpenApiSpec = {
         responses: { '200': { description: 'Space tree' } },
       },
     },
+    '/api/v1/spaces/{id}': {
+      delete: {
+        operationId: 'spaces.delete',
+        tags: ['spaces'],
+        summary: 'Delete a space by id',
+        description:
+          'Removes a space only when it no longer owns categories or documents. ' +
+          'Otherwise returns 409 CONFLICT with counts and sample ids so the caller can ' +
+          'migrate the remaining content first.',
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          '200': {
+            description: 'Deleted',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    ok: { type: 'boolean', example: true },
+                    deletedSpaceId: { type: 'string', format: 'uuid' },
+                  },
+                },
+              },
+            },
+          },
+          '401': { description: 'Unauthenticated' },
+          '403': { description: 'Not an admin' },
+          '404': { description: 'Space not found' },
+          '409': {
+            description: 'Space still has categories or documents',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+    },
     '/api/v1/categories': {
       get: {
         operationId: 'categories.list',
@@ -319,6 +372,46 @@ export const docbaseOpenApiSpec = {
           },
         },
         responses: { '201': { description: 'Created' } },
+      },
+    },
+    '/api/v1/categories/{id}': {
+      patch: {
+        operationId: 'categories.update',
+        tags: ['categories'],
+        summary: 'Update a category by id',
+        description:
+          'Partial update. Pass any subset of `name`, `description`, `spaceId`. ' +
+          'When `spaceId` changes, every document attached to this category is ' +
+          'retargeted to the new space so subsequent deletes of the old space ' +
+          'do not hit the FK `onDelete: restrict` guard on `document.space_id`.',
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': { schema: { $ref: '#/components/schemas/UpdateCategory' } },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Updated',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    category: { $ref: '#/components/schemas/Category' },
+                  },
+                },
+              },
+            },
+          },
+          '400': { description: 'Validation error' },
+          '401': { description: 'Unauthenticated' },
+          '403': { description: 'Not an admin' },
+          '404': { description: 'Category or target space not found' },
+        },
       },
     },
     '/api/v1/tags': {

@@ -34,9 +34,11 @@ import { Route as ProtectedSettingsTokensRouteImport } from './routes/_protected
 import { Route as ProtectedDocumentsNewRouteImport } from './routes/_protected.documents.new'
 import { Route as ProtectedDocumentsSlugRouteImport } from './routes/_protected.documents.$slug'
 import { Route as ApiV1SpacesTreeRouteImport } from './routes/api/v1/spaces.tree'
+import { Route as ApiV1SpacesIdRouteImport } from './routes/api/v1/spaces.$id'
 import { Route as ApiV1QuickNotesIdRouteImport } from './routes/api/v1/quick-notes.$id'
 import { Route as ApiV1DocumentsImportMdRouteImport } from './routes/api/v1/documents.import-md'
 import { Route as ApiV1DocumentsSlugRouteImport } from './routes/api/v1/documents.$slug'
+import { Route as ApiV1CategoriesIdRouteImport } from './routes/api/v1/categories.$id'
 import { Route as ProtectedDocumentsSlugEditRouteImport } from './routes/_protected.documents.$slug.edit'
 import { Route as ApiV1QuickNotesIdPromoteRouteImport } from './routes/api/v1/quick-notes.$id.promote'
 
@@ -164,6 +166,11 @@ const ApiV1SpacesTreeRoute = ApiV1SpacesTreeRouteImport.update({
   path: '/tree',
   getParentRoute: () => ApiV1SpacesRoute,
 } as any)
+const ApiV1SpacesIdRoute = ApiV1SpacesIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiV1SpacesRoute,
+} as any)
 const ApiV1QuickNotesIdRoute = ApiV1QuickNotesIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -178,6 +185,11 @@ const ApiV1DocumentsSlugRoute = ApiV1DocumentsSlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
   getParentRoute: () => ApiV1DocumentsRoute,
+} as any)
+const ApiV1CategoriesIdRoute = ApiV1CategoriesIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiV1CategoriesRoute,
 } as any)
 const ProtectedDocumentsSlugEditRoute =
   ProtectedDocumentsSlugEditRouteImport.update({
@@ -210,16 +222,18 @@ export interface FileRoutesByFullPath {
   '/api/install/config': typeof ApiInstallConfigRoute
   '/api/install/run': typeof ApiInstallRunRoute
   '/api/install/state': typeof ApiInstallStateRoute
-  '/api/v1/categories': typeof ApiV1CategoriesRoute
+  '/api/v1/categories': typeof ApiV1CategoriesRouteWithChildren
   '/api/v1/documents': typeof ApiV1DocumentsRouteWithChildren
   '/api/v1/openapi': typeof ApiV1OpenapiRoute
   '/api/v1/quick-notes': typeof ApiV1QuickNotesRouteWithChildren
   '/api/v1/spaces': typeof ApiV1SpacesRouteWithChildren
   '/api/v1/tags': typeof ApiV1TagsRoute
   '/documents/$slug/edit': typeof ProtectedDocumentsSlugEditRoute
+  '/api/v1/categories/$id': typeof ApiV1CategoriesIdRoute
   '/api/v1/documents/$slug': typeof ApiV1DocumentsSlugRoute
   '/api/v1/documents/import-md': typeof ApiV1DocumentsImportMdRoute
   '/api/v1/quick-notes/$id': typeof ApiV1QuickNotesIdRouteWithChildren
+  '/api/v1/spaces/$id': typeof ApiV1SpacesIdRoute
   '/api/v1/spaces/tree': typeof ApiV1SpacesTreeRoute
   '/api/v1/quick-notes/$id/promote': typeof ApiV1QuickNotesIdPromoteRoute
 }
@@ -241,16 +255,18 @@ export interface FileRoutesByTo {
   '/api/install/config': typeof ApiInstallConfigRoute
   '/api/install/run': typeof ApiInstallRunRoute
   '/api/install/state': typeof ApiInstallStateRoute
-  '/api/v1/categories': typeof ApiV1CategoriesRoute
+  '/api/v1/categories': typeof ApiV1CategoriesRouteWithChildren
   '/api/v1/documents': typeof ApiV1DocumentsRouteWithChildren
   '/api/v1/openapi': typeof ApiV1OpenapiRoute
   '/api/v1/quick-notes': typeof ApiV1QuickNotesRouteWithChildren
   '/api/v1/spaces': typeof ApiV1SpacesRouteWithChildren
   '/api/v1/tags': typeof ApiV1TagsRoute
   '/documents/$slug/edit': typeof ProtectedDocumentsSlugEditRoute
+  '/api/v1/categories/$id': typeof ApiV1CategoriesIdRoute
   '/api/v1/documents/$slug': typeof ApiV1DocumentsSlugRoute
   '/api/v1/documents/import-md': typeof ApiV1DocumentsImportMdRoute
   '/api/v1/quick-notes/$id': typeof ApiV1QuickNotesIdRouteWithChildren
+  '/api/v1/spaces/$id': typeof ApiV1SpacesIdRoute
   '/api/v1/spaces/tree': typeof ApiV1SpacesTreeRoute
   '/api/v1/quick-notes/$id/promote': typeof ApiV1QuickNotesIdPromoteRoute
 }
@@ -274,16 +290,18 @@ export interface FileRoutesById {
   '/api/install/config': typeof ApiInstallConfigRoute
   '/api/install/run': typeof ApiInstallRunRoute
   '/api/install/state': typeof ApiInstallStateRoute
-  '/api/v1/categories': typeof ApiV1CategoriesRoute
+  '/api/v1/categories': typeof ApiV1CategoriesRouteWithChildren
   '/api/v1/documents': typeof ApiV1DocumentsRouteWithChildren
   '/api/v1/openapi': typeof ApiV1OpenapiRoute
   '/api/v1/quick-notes': typeof ApiV1QuickNotesRouteWithChildren
   '/api/v1/spaces': typeof ApiV1SpacesRouteWithChildren
   '/api/v1/tags': typeof ApiV1TagsRoute
   '/_protected/documents/$slug/edit': typeof ProtectedDocumentsSlugEditRoute
+  '/api/v1/categories/$id': typeof ApiV1CategoriesIdRoute
   '/api/v1/documents/$slug': typeof ApiV1DocumentsSlugRoute
   '/api/v1/documents/import-md': typeof ApiV1DocumentsImportMdRoute
   '/api/v1/quick-notes/$id': typeof ApiV1QuickNotesIdRouteWithChildren
+  '/api/v1/spaces/$id': typeof ApiV1SpacesIdRoute
   '/api/v1/spaces/tree': typeof ApiV1SpacesTreeRoute
   '/api/v1/quick-notes/$id/promote': typeof ApiV1QuickNotesIdPromoteRoute
 }
@@ -314,9 +332,11 @@ export interface FileRouteTypes {
     | '/api/v1/spaces'
     | '/api/v1/tags'
     | '/documents/$slug/edit'
+    | '/api/v1/categories/$id'
     | '/api/v1/documents/$slug'
     | '/api/v1/documents/import-md'
     | '/api/v1/quick-notes/$id'
+    | '/api/v1/spaces/$id'
     | '/api/v1/spaces/tree'
     | '/api/v1/quick-notes/$id/promote'
   fileRoutesByTo: FileRoutesByTo
@@ -345,9 +365,11 @@ export interface FileRouteTypes {
     | '/api/v1/spaces'
     | '/api/v1/tags'
     | '/documents/$slug/edit'
+    | '/api/v1/categories/$id'
     | '/api/v1/documents/$slug'
     | '/api/v1/documents/import-md'
     | '/api/v1/quick-notes/$id'
+    | '/api/v1/spaces/$id'
     | '/api/v1/spaces/tree'
     | '/api/v1/quick-notes/$id/promote'
   id:
@@ -377,9 +399,11 @@ export interface FileRouteTypes {
     | '/api/v1/spaces'
     | '/api/v1/tags'
     | '/_protected/documents/$slug/edit'
+    | '/api/v1/categories/$id'
     | '/api/v1/documents/$slug'
     | '/api/v1/documents/import-md'
     | '/api/v1/quick-notes/$id'
+    | '/api/v1/spaces/$id'
     | '/api/v1/spaces/tree'
     | '/api/v1/quick-notes/$id/promote'
   fileRoutesById: FileRoutesById
@@ -395,7 +419,7 @@ export interface RootRouteChildren {
   ApiInstallConfigRoute: typeof ApiInstallConfigRoute
   ApiInstallRunRoute: typeof ApiInstallRunRoute
   ApiInstallStateRoute: typeof ApiInstallStateRoute
-  ApiV1CategoriesRoute: typeof ApiV1CategoriesRoute
+  ApiV1CategoriesRoute: typeof ApiV1CategoriesRouteWithChildren
   ApiV1DocumentsRoute: typeof ApiV1DocumentsRouteWithChildren
   ApiV1OpenapiRoute: typeof ApiV1OpenapiRoute
   ApiV1QuickNotesRoute: typeof ApiV1QuickNotesRouteWithChildren
@@ -580,6 +604,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiV1SpacesTreeRouteImport
       parentRoute: typeof ApiV1SpacesRoute
     }
+    '/api/v1/spaces/$id': {
+      id: '/api/v1/spaces/$id'
+      path: '/$id'
+      fullPath: '/api/v1/spaces/$id'
+      preLoaderRoute: typeof ApiV1SpacesIdRouteImport
+      parentRoute: typeof ApiV1SpacesRoute
+    }
     '/api/v1/quick-notes/$id': {
       id: '/api/v1/quick-notes/$id'
       path: '/$id'
@@ -600,6 +631,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/v1/documents/$slug'
       preLoaderRoute: typeof ApiV1DocumentsSlugRouteImport
       parentRoute: typeof ApiV1DocumentsRoute
+    }
+    '/api/v1/categories/$id': {
+      id: '/api/v1/categories/$id'
+      path: '/$id'
+      fullPath: '/api/v1/categories/$id'
+      preLoaderRoute: typeof ApiV1CategoriesIdRouteImport
+      parentRoute: typeof ApiV1CategoriesRoute
     }
     '/_protected/documents/$slug/edit': {
       id: '/_protected/documents/$slug/edit'
@@ -658,6 +696,18 @@ const ProtectedRouteWithChildren = ProtectedRoute._addFileChildren(
   ProtectedRouteChildren,
 )
 
+interface ApiV1CategoriesRouteChildren {
+  ApiV1CategoriesIdRoute: typeof ApiV1CategoriesIdRoute
+}
+
+const ApiV1CategoriesRouteChildren: ApiV1CategoriesRouteChildren = {
+  ApiV1CategoriesIdRoute: ApiV1CategoriesIdRoute,
+}
+
+const ApiV1CategoriesRouteWithChildren = ApiV1CategoriesRoute._addFileChildren(
+  ApiV1CategoriesRouteChildren,
+)
+
 interface ApiV1DocumentsRouteChildren {
   ApiV1DocumentsSlugRoute: typeof ApiV1DocumentsSlugRoute
   ApiV1DocumentsImportMdRoute: typeof ApiV1DocumentsImportMdRoute
@@ -696,10 +746,12 @@ const ApiV1QuickNotesRouteWithChildren = ApiV1QuickNotesRoute._addFileChildren(
 )
 
 interface ApiV1SpacesRouteChildren {
+  ApiV1SpacesIdRoute: typeof ApiV1SpacesIdRoute
   ApiV1SpacesTreeRoute: typeof ApiV1SpacesTreeRoute
 }
 
 const ApiV1SpacesRouteChildren: ApiV1SpacesRouteChildren = {
+  ApiV1SpacesIdRoute: ApiV1SpacesIdRoute,
   ApiV1SpacesTreeRoute: ApiV1SpacesTreeRoute,
 }
 
@@ -718,7 +770,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiInstallConfigRoute: ApiInstallConfigRoute,
   ApiInstallRunRoute: ApiInstallRunRoute,
   ApiInstallStateRoute: ApiInstallStateRoute,
-  ApiV1CategoriesRoute: ApiV1CategoriesRoute,
+  ApiV1CategoriesRoute: ApiV1CategoriesRouteWithChildren,
   ApiV1DocumentsRoute: ApiV1DocumentsRouteWithChildren,
   ApiV1OpenapiRoute: ApiV1OpenapiRoute,
   ApiV1QuickNotesRoute: ApiV1QuickNotesRouteWithChildren,
