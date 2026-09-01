@@ -56,7 +56,10 @@ export function SidebarContent({
   const activeKeys = useMemo(() => collectActiveTreeKeys(spaces, pathname), [spaces, pathname])
 
   useEffect(() => {
-    setOpenKeys(new Set([...expandedKeys, ...activeKeys]))
+    // Route loaders can revalidate after following a space or document link.
+    // Merge their persisted state instead of replacing local state, so a
+    // navigation never collapses folders the user has already opened.
+    setOpenKeys((current) => new Set([...current, ...expandedKeys, ...activeKeys]))
   }, [expandedKeys, activeKeys])
 
   const updateOpenKeys = (next: Set<string>) => {
