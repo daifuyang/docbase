@@ -105,8 +105,8 @@ export function SidebarContent({
           </div>
           {groupSpaces(spaces).map(({ group, spaces: spacesInGroup }) => (
             <div key={group.key} className="space-y-1">
-              <div className="flex items-center gap-1.5 px-2 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
-                <group.icon className="h-3 w-3 text-muted-foreground/70" />
+              <div className="flex items-center gap-1.5 px-2 pt-2 text-xs font-medium text-muted-foreground">
+                <group.icon className="h-3 w-3" />
                 <span>{group.name}</span>
               </div>
               {spacesInGroup.map((space) => (
