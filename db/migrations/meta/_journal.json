@@ -50,6 +50,13 @@
       "when": 1783935336154,
       "tag": "0006_volatile_meltdown",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788248123780,
+      "tag": "0007_youthful_bloodscream",
+      "breakpoints": true
     }
   ]
 }

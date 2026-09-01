@@ -1,4 +1,4 @@
-import { index, integer, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { foreignKey, index, integer, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { user } from './auth'
 
 export const space = pgTable(
@@ -9,6 +9,7 @@ export const space = pgTable(
     slug: text('slug').notNull().unique(),
     description: text('description'),
     sortOrder: integer('sort_order').notNull().default(0),
+    parentId: uuid('parent_id'),
     createdBy: text('created_by')
       .notNull()
       .references(() => user.id, { onDelete: 'restrict' }),
@@ -17,6 +18,12 @@ export const space = pgTable(
   },
   (table) => ({
     slugIdx: index('space_slug_idx').on(table.slug),
+    parentIdx: index('space_parent_idx').on(table.parentId),
+    spaceParentFk: foreignKey({
+      columns: [table.parentId],
+      foreignColumns: [table.id],
+      name: 'space_parent_id_space_id_fk',
+    }).onDelete('set null'),
   }),
 )
 

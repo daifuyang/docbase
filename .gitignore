@@ -74,3 +74,7 @@ skills-lock.json
 
 # Transient artifacts (preview renders, debug dumps)
 tmp/
+
+# Sandbox / tool local state (DSH meow-memory, playwright-cli cache)
+.dsh-meow/
+.playwright-cli/

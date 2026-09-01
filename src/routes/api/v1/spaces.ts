@@ -6,6 +6,7 @@ import { createSpaceService, listSpacesService } from '~/server/services/spaces'
 const createSpaceSchema = z.object({
   name: z.string().min(1).max(60),
   description: z.string().max(200).optional(),
+  parentId: z.string().uuid().nullable().optional(),
 })
 
 export const Route = createFileRoute('/api/v1/spaces')({
