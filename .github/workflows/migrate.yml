@@ -40,7 +40,17 @@ jobs:
           ref: deploy
 
       - name: Install aliyun CLI
-        run: npm install -g aliyun-cli
+        # Each step in GitHub Actions runs in a fresh shell, so npm
+        # globals don't persist between steps. Install into a per-run
+        # prefix and export PATH for downstream steps via $GITHUB_PATH.
+        run: |
+          set -euo pipefail
+          PREFIX="$RUNNER_TEMP/aliyun-cli"
+          mkdir -p "$PREFIX"
+          npm install --prefix "$PREFIX" aliyun-cli
+          echo "$PREFIX/node_modules/.bin" >> "$GITHUB_PATH"
+          # verify in this same step
+          "$PREFIX/node_modules/.bin/aliyun" --version
 
       - name: Configure aliyun credentials
         env:
