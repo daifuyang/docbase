@@ -186,7 +186,7 @@ function TreeSpace({ space, depth, isOpen, openKeys, onToggle }: TreeSpaceProps)
         <Link
           to="/spaces/$slug"
           params={{ slug: space.slug }}
-          className="flex min-w-0 flex-1 items-center gap-2 py-1.5 pr-1 text-sm text-foreground/80 hover:text-foreground [&.active]:font-medium [&.active]:text-accent-foreground"
+          className="flex min-w-0 flex-1 items-center gap-2 py-1.5 pr-1 text-sm text-foreground/80 hover:text-foreground [&.active]:text-accent-foreground"
         >
           {isOpen ? (
             <FolderOpen className="h-4 w-4 shrink-0" />
@@ -239,7 +239,7 @@ function TreeSpace({ space, depth, isOpen, openKeys, onToggle }: TreeSpaceProps)
                       to="/spaces/$slug"
                       params={{ slug: space.slug }}
                       search={{ category: category.slug }}
-                      className="flex min-w-0 flex-1 items-center gap-2 py-1.5 pr-1 text-[13px] text-foreground/75 hover:text-foreground [&.active]:font-medium [&.active]:text-accent-foreground"
+                      className="flex min-w-0 flex-1 items-center gap-2 py-1.5 pr-1 text-[13px] text-foreground/75 hover:text-foreground [&.active]:text-accent-foreground"
                     >
                       <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center">
                         <Folder className="h-3.5 w-3.5" />
@@ -320,8 +320,7 @@ function SidebarLink({
         compact ? 'py-1.5 text-[13px]' : 'py-1.5',
       )}
       activeProps={{
-        className:
-          'flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm bg-accent font-medium text-accent-foreground',
+        className: 'bg-accent text-accent-foreground',
       }}
     >
       <span className="flex h-4 w-4 shrink-0 items-center justify-center">{icon}</span>
