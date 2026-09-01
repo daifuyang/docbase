@@ -16,6 +16,7 @@ export type SpaceSummary = {
   name: string
   slug: string
   description: string | null
+  parentId: string | null
 }
 
 export type CategorySummary = {
@@ -41,6 +42,7 @@ export type CategoryTreeItem = CategorySummary & {
 export type SpaceTreeItem = SpaceSummary & {
   categories: CategoryTreeItem[]
   documents: DocumentTreeItem[]
+  children: SpaceTreeItem[]
 }
 
 export type DocumentSummary = {

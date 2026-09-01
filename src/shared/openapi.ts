@@ -66,6 +66,12 @@ export const docbaseOpenApiSpec = {
           name: { type: 'string' },
           slug: { type: 'string' },
           description: { type: 'string', nullable: true },
+          parentId: { type: 'string', format: 'uuid', nullable: true },
+          children: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/Space' },
+            description: 'Nested child spaces (only present on tree responses).',
+          },
         },
       },
       Category: {
@@ -158,6 +164,19 @@ export const docbaseOpenApiSpec = {
           name: { type: 'string', minLength: 1, maxLength: 60 },
           description: { type: 'string', maxLength: 200, nullable: true },
           spaceId: { type: 'string', format: 'uuid' },
+        },
+      },
+      UpdateSpace: {
+        type: 'object',
+        description:
+          'Partial update for a space. At least one field must be provided. ' +
+          'Setting `parentId` moves the space under another space (or to the top ' +
+          'level when null). The new parent must not be the space itself nor any ' +
+          'of its descendants — the service rejects both with a validation error.',
+        properties: {
+          name: { type: 'string', minLength: 1, maxLength: 60 },
+          description: { type: 'string', maxLength: 200, nullable: true },
+          parentId: { type: 'string', format: 'uuid', nullable: true },
         },
       },
     },
@@ -333,12 +352,24 @@ export const docbaseOpenApiSpec = {
                 properties: {
                   name: { type: 'string' },
                   description: { type: 'string' },
+                  parentId: {
+                    type: 'string',
+                    format: 'uuid',
+                    nullable: true,
+                    description:
+                      'Optional parent space id. When provided, the new space is created ' +
+                      'as a child of the referenced space. Must not form a cycle.',
+                  },
                 },
               },
             },
           },
         },
-        responses: { '201': { description: 'Created' } },
+        responses: {
+          '201': { description: 'Created' },
+          '400': { description: 'Validation error or cycle detected' },
+          '404': { description: 'Parent space not found' },
+        },
       },
     },
     '/api/v1/spaces/tree': {
@@ -346,10 +377,38 @@ export const docbaseOpenApiSpec = {
         operationId: 'spaces.tree',
         tags: ['spaces'],
         summary: 'List space tree',
+        description:
+          'Returns the full space tree. Each top-level space carries its nested `children` ' +
+          'array so the sidebar can render real two-level nesting without re-querying.',
         responses: { '200': { description: 'Space tree' } },
       },
     },
     '/api/v1/spaces/{id}': {
+      patch: {
+        operationId: 'spaces.update',
+        tags: ['spaces'],
+        summary: 'Update a space by id',
+        description:
+          'Partial update. Pass any subset of `name`, `description`, `parentId`. ' +
+          'Setting `parentId` is rejected when it would create a cycle (A → B → A or ' +
+          'making the space its own ancestor).',
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': { schema: { $ref: '#/components/schemas/UpdateSpace' } },
+          },
+        },
+        responses: {
+          '200': { description: 'Updated' },
+          '400': { description: 'Validation error or cycle detected' },
+          '401': { description: 'Unauthenticated' },
+          '403': { description: 'Not an admin' },
+          '404': { description: 'Space or parent space not found' },
+        },
+      },
       delete: {
         operationId: 'spaces.delete',
         tags: ['spaces'],

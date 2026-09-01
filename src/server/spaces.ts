@@ -5,12 +5,14 @@ import { contextFromHeaders, requireUserContext } from '~/server/services/contex
 import {
   createCategoryService,
   createSpaceService,
+  deleteSpaceService,
   getNavigationTreeService,
   listCategoriesBySpaceService,
   listCategoriesService,
   listSpaceTreeService,
   listSpacesService,
   updateNavigationTreeStateService,
+  updateSpaceService,
 } from '~/server/services/spaces'
 
 export const listSpaces = createServerFn({ method: 'GET' }).handler(async () =>
@@ -49,10 +51,33 @@ export const listCategories = createServerFn({ method: 'GET' }).handler(async ()
 
 export const createSpace = createServerFn({ method: 'POST' })
   .validator(
-    z.object({ name: z.string().min(1).max(60), description: z.string().max(200).optional() }),
+    z.object({
+      name: z.string().min(1).max(60),
+      description: z.string().max(200).optional(),
+      parentId: z.string().uuid().nullable().optional(),
+    }),
   )
   .handler(async ({ data }) =>
     createSpaceService(requireUserContext(await contextFromHeaders(getRequestHeaders())), data),
+  )
+
+export const updateSpace = createServerFn({ method: 'POST' })
+  .validator(
+    z.object({
+      id: z.string().uuid(),
+      name: z.string().min(1).max(60).optional(),
+      description: z.string().max(200).nullable().optional(),
+      parentId: z.string().uuid().nullable().optional(),
+    }),
+  )
+  .handler(async ({ data }) =>
+    updateSpaceService(requireUserContext(await contextFromHeaders(getRequestHeaders())), data),
+  )
+
+export const deleteSpace = createServerFn({ method: 'POST' })
+  .validator(z.object({ id: z.string().uuid() }))
+  .handler(async ({ data }) =>
+    deleteSpaceService(requireUserContext(await contextFromHeaders(getRequestHeaders())), data),
   )
 
 export const createCategory = createServerFn({ method: 'POST' })

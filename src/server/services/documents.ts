@@ -384,6 +384,7 @@ async function toSummary(row: {
       name: row.space.name,
       slug: row.space.slug,
       description: row.space.description,
+      parentId: row.space.parentId,
     },
     category: row.category
       ? {
