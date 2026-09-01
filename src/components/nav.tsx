@@ -58,8 +58,8 @@ export function Nav({ me, tags = [], spaces = [], expandedKeys = [] }: NavProps)
               <span className="sr-only">打开菜单</span>
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-72 p-4">
-            <SheetHeader className="mb-5">
+          <SheetContent side="left" className="flex w-72 flex-col overflow-hidden p-4">
+            <SheetHeader className="mb-5 shrink-0">
               <SheetTitle className="flex items-center gap-2">
                 <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-sm font-bold text-primary-foreground">
                   D
@@ -67,7 +67,9 @@ export function Nav({ me, tags = [], spaces = [], expandedKeys = [] }: NavProps)
                 DocBase
               </SheetTitle>
             </SheetHeader>
-            <SidebarContent popularTags={tags} spaces={spaces} expandedKeys={expandedKeys} />
+            <div className="min-h-0 flex-1 overflow-y-auto pr-1 scrollbar-thin">
+              <SidebarContent popularTags={tags} spaces={spaces} expandedKeys={expandedKeys} />
+            </div>
           </SheetContent>
         </Sheet>
 

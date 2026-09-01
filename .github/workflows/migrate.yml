@@ -40,7 +40,19 @@ jobs:
           ref: deploy
 
       - name: Install aliyun CLI
-        run: npm install -g aliyun-cli
+        # The npm "aliyun-cli" package is a stray (OSS-only) wrapper, not
+        # the official Alibaba Cloud CLI. We install the real CLI as a
+        # static binary from aliyun's CDN and put it on $GITHUB_PATH so
+        # later steps can call `aliyun` directly.
+        run: |
+          set -euo pipefail
+          URL="https://aliyuncli.alicdn.com/aliyun-cli-linux-3.0.0-amd64.tgz"
+          PREFIX="$RUNNER_TEMP/aliyun-cli"
+          mkdir -p "$PREFIX/bin"
+          curl -fsSL "$URL" | tar -xz -C "$PREFIX/bin"
+          chmod +x "$PREFIX/bin/aliyun"
+          echo "$PREFIX/bin" >> "$GITHUB_PATH"
+          aliyun --version
 
       - name: Configure aliyun credentials
         env:
