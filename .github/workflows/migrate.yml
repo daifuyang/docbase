@@ -48,9 +48,10 @@ jobs:
           set -euo pipefail
           URL="https://aliyuncli.alicdn.com/aliyun-cli-linux-3.0.0-amd64.tgz"
           PREFIX="$RUNNER_TEMP/aliyun-cli"
-          mkdir -p "$PREFIX"
-          curl -fsSL "$URL" | tar -xz -C "$PREFIX" --strip-components=1
-          echo "$PREFIX" >> "$GITHUB_PATH"
+          mkdir -p "$PREFIX/bin"
+          curl -fsSL "$URL" | tar -xz -C "$PREFIX/bin"
+          chmod +x "$PREFIX/bin/aliyun"
+          echo "$PREFIX/bin" >> "$GITHUB_PATH"
           aliyun --version
 
       - name: Configure aliyun credentials
