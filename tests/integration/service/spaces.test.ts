@@ -43,14 +43,31 @@ describe('spaces + categories service layer', () => {
   let emptySpaceId = ''
 
   beforeAll(async () => {
-    // Mirror the documents test setup: `contextForUser('svc_test_user')` only
-    // produces a literal userId; replace it with the real DB row id so
-    // `requireAdmin` can find the admin user.
-    const testUser = await db.query.user.findFirst({
+    // Self-seed the admin user the same way documents.test.ts does. Without
+    // this, running this suite alone (or before documents.test.ts) on a fresh
+    // CI database would fail because `svc_test_user` does not exist yet.
+    const existing = await db.query.user.findFirst({
       where: eq(schema.user.username, 'svc_test_user'),
     })
-    if (!testUser) throw new Error('svc_test_user not seeded — run documents suite first')
-    ctx.userId = testUser.id
+    if (existing) {
+      ctx.userId = existing.id
+    } else {
+      const newId = `test-user-${Date.now()}`
+      const inserted = await db
+        .insert(schema.user)
+        .values({
+          id: newId,
+          username: 'svc_test_user',
+          email: 'svc_test@test.local',
+          displayName: 'Test User',
+          name: 'Test User',
+          role: 'admin',
+        })
+        .returning()
+      const seeded = inserted[0]
+      if (!seeded) throw new Error('Failed to seed svc_test_user')
+      ctx.userId = seeded.id
+    }
 
     const target = await createSpaceService(ctx, { name: targetSpaceName })
     targetSpaceId = target.space.id
