@@ -42,7 +42,7 @@ function ProtectedLayout() {
           popularTags={tags}
           spaces={spaces}
           expandedKeys={expandedKeys}
-          className="hidden h-[calc(100vh-3.5rem)] overflow-y-auto border-r border-border bg-surface/70 scrollbar-thin lg:block xl:w-72"
+          className="sticky top-14 hidden h-[calc(100vh-3.5rem)] self-start overflow-y-auto border-r border-border bg-surface/70 scrollbar-thin lg:block xl:w-72"
           contentClassName="p-4 xl:p-5"
         />
         <main className="min-w-0 flex-1">

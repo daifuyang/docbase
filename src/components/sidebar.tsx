@@ -188,8 +188,12 @@ function TreeSpace({ space, depth, isOpen, openKeys, onToggle }: TreeSpaceProps)
           params={{ slug: space.slug }}
           className="flex min-w-0 flex-1 items-center gap-2 py-1.5 pr-1 text-sm text-foreground/80 hover:text-foreground [&.active]:font-medium [&.active]:text-accent-foreground"
         >
-          {isOpen ? <FolderOpen className="h-4 w-4" /> : <Folder className="h-4 w-4" />}
-          <span className="truncate">{space.name}</span>
+          {isOpen ? (
+            <FolderOpen className="h-4 w-4 shrink-0" />
+          ) : (
+            <Folder className="h-4 w-4 shrink-0" />
+          )}
+          <span className="min-w-0 truncate">{space.name}</span>
         </Link>
         <Link
           to="/documents/new"
@@ -237,9 +241,11 @@ function TreeSpace({ space, depth, isOpen, openKeys, onToggle }: TreeSpaceProps)
                       search={{ category: category.slug }}
                       className="flex min-w-0 flex-1 items-center gap-2 py-1.5 pr-1 text-[13px] text-foreground/75 hover:text-foreground [&.active]:font-medium [&.active]:text-accent-foreground"
                     >
-                      <Folder className="h-3.5 w-3.5" />
-                      <span className="truncate">{category.name}</span>
-                      <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+                      <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center">
+                        <Folder className="h-3.5 w-3.5" />
+                      </span>
+                      <span className="min-w-0 truncate">{category.name}</span>
+                      <span className="ml-auto shrink-0 text-xs tabular-nums text-muted-foreground">
                         {category.documents.length}
                       </span>
                     </Link>
@@ -318,8 +324,8 @@ function SidebarLink({
           'flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm bg-accent font-medium text-accent-foreground',
       }}
     >
-      <span className="flex h-4 w-4 items-center justify-center">{icon}</span>
-      <span className="truncate">{children}</span>
+      <span className="flex h-4 w-4 shrink-0 items-center justify-center">{icon}</span>
+      <span className="min-w-0 truncate">{children}</span>
     </Link>
   )
 }
