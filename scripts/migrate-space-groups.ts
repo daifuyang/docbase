@@ -29,7 +29,6 @@ const GROUP_SPACES: readonly GroupDef[] = [
     children: [
       '公司治理与制度',
       '战略与经营',
-      '产品与项目',
       '市场销售与客户',
       '运营与交付',
       '人力行政',
@@ -47,7 +46,7 @@ const GROUP_SPACES: readonly GroupDef[] = [
     slug: 'space-business',
     name: '业务与项目',
     description: '业务交付与项目工作区（OPC 等）',
-    children: ['OPC 超级个体'],
+    children: ['OPC 超级个体', '产品与项目'],
   },
 ] as const
 

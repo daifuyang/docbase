@@ -5,6 +5,7 @@ import { contextFromHeaders, requireUserContext } from '~/server/services/contex
 import {
   createCategoryService,
   createSpaceService,
+  deleteCategoryService,
   deleteSpaceService,
   getNavigationTreeService,
   listCategoriesBySpaceService,
@@ -78,6 +79,12 @@ export const deleteSpace = createServerFn({ method: 'POST' })
   .validator(z.object({ id: z.string().uuid() }))
   .handler(async ({ data }) =>
     deleteSpaceService(requireUserContext(await contextFromHeaders(getRequestHeaders())), data),
+  )
+
+export const deleteCategory = createServerFn({ method: 'POST' })
+  .validator(z.object({ id: z.string().uuid() }))
+  .handler(async ({ data }) =>
+    deleteCategoryService(requireUserContext(await contextFromHeaders(getRequestHeaders())), data),
   )
 
 export const createCategory = createServerFn({ method: 'POST' })
