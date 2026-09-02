@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
 import { handleApiError, json, parseJson, requireApiContext } from '~/server/http'
-import { updateCategoryService } from '~/server/services/spaces'
+import { deleteCategoryService, updateCategoryService } from '~/server/services/spaces'
 
 const updateCategorySchema = z
   .object({
@@ -23,6 +23,15 @@ export const Route = createFileRoute('/api/v1/categories/$id')({
           const input = updateCategorySchema.parse(await parseJson(request))
           const result = await updateCategoryService(ctx, { id, ...input })
           return json(result)
+        } catch (error) {
+          return handleApiError(error)
+        }
+      },
+      DELETE: async ({ request, params }) => {
+        try {
+          const ctx = await requireApiContext(request)
+          const id = z.string().uuid().parse(params.id)
+          return json(await deleteCategoryService(ctx, { id }))
         } catch (error) {
           return handleApiError(error)
         }

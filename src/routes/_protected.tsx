@@ -1,6 +1,7 @@
 import { Outlet, createFileRoute, redirect } from '@tanstack/react-router'
 import { Nav } from '~/components/nav'
 import { Sidebar } from '~/components/sidebar'
+import { NavigationTreeProvider } from '~/lib/navigation-tree-state'
 import { getCurrentUser } from '~/server/auth'
 import { getNavigationTree } from '~/server/spaces'
 import { listTags } from '~/server/tags'
@@ -35,20 +36,24 @@ function ProtectedLayout() {
   const { tags, spaces, expandedKeys } = Route.useLoaderData()
 
   return (
-    <div className="min-h-screen bg-background">
-      <Nav me={me} tags={tags} spaces={spaces} expandedKeys={expandedKeys} />
-      <div className="mx-auto flex min-h-[calc(100vh-3.5rem)] w-full max-w-[1920px]">
-        <Sidebar
-          popularTags={tags}
-          spaces={spaces}
-          expandedKeys={expandedKeys}
-          className="hidden h-[calc(100vh-3.5rem)] overflow-y-auto border-r border-border bg-surface/70 scrollbar-thin lg:block xl:w-72"
-          contentClassName="p-4 xl:p-5"
-        />
-        <main className="min-w-0 flex-1">
-          <Outlet />
-        </main>
+    // One provider wraps both the mobile drawer (inside Nav) and the desktop
+    // sidebar, so expansion state has a single owner instead of one copy per
+    // component fighting over the same persisted preference row.
+    <NavigationTreeProvider expandedKeys={expandedKeys}>
+      <div className="min-h-screen bg-background">
+        <Nav me={me} tags={tags} spaces={spaces} />
+        <div className="mx-auto flex min-h-[calc(100vh-3.5rem)] w-full max-w-[1920px]">
+          <Sidebar
+            popularTags={tags}
+            spaces={spaces}
+            className="sticky top-14 hidden h-[calc(100vh-3.5rem)] self-start overflow-y-auto border-r border-border bg-surface/70 scrollbar-thin lg:block xl:w-72"
+            contentClassName="p-4 xl:p-5"
+          />
+          <main className="min-w-0 flex-1">
+            <Outlet />
+          </main>
+        </div>
       </div>
-    </div>
+    </NavigationTreeProvider>
   )
 }

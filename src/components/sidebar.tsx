@@ -1,6 +1,6 @@
 'use client'
 
-import { Link, useRouterState } from '@tanstack/react-router'
+import { Link } from '@tanstack/react-router'
 import {
   ChevronDown,
   ChevronRight,
@@ -12,69 +12,30 @@ import {
   Plus,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { useEffect, useMemo, useState, useTransition } from 'react'
+import { useNavigationTree } from '~/lib/navigation-tree-state'
 import { cn } from '~/lib/utils'
-import { updateNavigationTreeState } from '~/server/spaces'
 import type { SpaceTreeItem } from '~/shared/types'
 
 type Props = {
   popularTags?: Array<{ name: string; slug: string }>
   spaces?: SpaceTreeItem[]
-  expandedKeys?: string[]
   className?: string
   contentClassName?: string
 }
 
-export function Sidebar({
-  popularTags = [],
-  spaces = [],
-  expandedKeys = [],
-  className,
-  contentClassName,
-}: Props) {
+export function Sidebar({ popularTags = [], spaces = [], className, contentClassName }: Props) {
   return (
     <aside className={cn('w-64 shrink-0', className)}>
-      <SidebarContent
-        popularTags={popularTags}
-        spaces={spaces}
-        expandedKeys={expandedKeys}
-        className={contentClassName}
-      />
+      <SidebarContent popularTags={popularTags} spaces={spaces} className={contentClassName} />
     </aside>
   )
 }
 
-export function SidebarContent({
-  popularTags = [],
-  spaces = [],
-  expandedKeys = [],
-  className,
-}: Props) {
-  const pathname = useRouterState({ select: (state) => state.location.pathname })
-  const [openKeys, setOpenKeys] = useState(() => new Set(expandedKeys))
-  const [, startTransition] = useTransition()
-  const activeKeys = useMemo(() => collectActiveTreeKeys(spaces, pathname), [spaces, pathname])
-
-  useEffect(() => {
-    // Route loaders can revalidate after following a space or document link.
-    // Merge their persisted state instead of replacing local state, so a
-    // navigation never collapses folders the user has already opened.
-    setOpenKeys((current) => new Set([...current, ...expandedKeys, ...activeKeys]))
-  }, [expandedKeys, activeKeys])
-
-  const updateOpenKeys = (next: Set<string>) => {
-    setOpenKeys(next)
-    startTransition(async () => {
-      await updateNavigationTreeState({ data: { expandedKeys: [...next] } }).catch(() => {})
-    })
-  }
-
-  const toggle = (key: string) => {
-    const next = new Set(openKeys)
-    if (next.has(key)) next.delete(key)
-    else next.add(key)
-    updateOpenKeys(next)
-  }
+export function SidebarContent({ popularTags = [], spaces = [], className }: Props) {
+  // Expansion state is owned by the shared NavigationTreeProvider so the
+  // desktop sidebar and the mobile drawer render one consistent tree instead
+  // of two copies that overwrite each other's persisted snapshot.
+  const { isOpen, toggle } = useNavigationTree()
 
   return (
     <div className={cn('space-y-5', className)}>
@@ -110,8 +71,8 @@ export function SidebarContent({
               key={space.id}
               space={space}
               depth={0}
-              isOpen={openKeys.has(spaceKey(space.id))}
-              openKeys={openKeys}
+              isOpen={isOpen(spaceKey(space.id))}
+              isKeyOpen={isOpen}
               onToggle={toggle}
             />
           ))}
@@ -152,7 +113,8 @@ type TreeSpaceProps = {
    */
   depth: number
   isOpen: boolean
-  openKeys: Set<string>
+  /** Predicate for descendant rows, from the shared navigation-tree store. */
+  isKeyOpen: (key: string) => boolean
   onToggle: (key: string) => void
 }
 
@@ -167,7 +129,7 @@ type TreeSpaceProps = {
  * requires recursive data; the component picks it up without any frontend
  * changes.
  */
-function TreeSpace({ space, depth, isOpen, openKeys, onToggle }: TreeSpaceProps) {
+function TreeSpace({ space, depth, isOpen, isKeyOpen, onToggle }: TreeSpaceProps) {
   const hasChildSpaces = space.children.length > 0
   const hasOwnContent = space.categories.length > 0 || space.documents.length > 0
   // Every space — top-level and child alike — renders with the same
@@ -214,8 +176,8 @@ function TreeSpace({ space, depth, isOpen, openKeys, onToggle }: TreeSpaceProps)
                   key={child.id}
                   space={child}
                   depth={depth + 1}
-                  isOpen={openKeys.has(spaceKey(child.id))}
-                  openKeys={openKeys}
+                  isOpen={isKeyOpen(spaceKey(child.id))}
+                  isKeyOpen={isKeyOpen}
                   onToggle={onToggle}
                 />
               ))}
@@ -228,7 +190,7 @@ function TreeSpace({ space, depth, isOpen, openKeys, onToggle }: TreeSpaceProps)
                   <div className="flex items-center gap-1 rounded-md hover:bg-secondary">
                     <TreeToggle
                       disabled={category.documents.length === 0}
-                      open={openKeys.has(categoryKey(category.id))}
+                      open={isKeyOpen(categoryKey(category.id))}
                       onClick={() => onToggle(categoryKey(category.id))}
                     />
                     <Link
@@ -253,7 +215,7 @@ function TreeSpace({ space, depth, isOpen, openKeys, onToggle }: TreeSpaceProps)
                       <span className="sr-only">在{category.name}中新建文档</span>
                     </Link>
                   </div>
-                  {openKeys.has(categoryKey(category.id)) && category.documents.length > 0 && (
+                  {isKeyOpen(categoryKey(category.id)) && category.documents.length > 0 && (
                     <div className="ml-5 space-y-0.5 border-l border-border/60 pl-2 py-0.5">
                       {category.documents.map((document) => (
                         <SidebarLink
@@ -347,29 +309,6 @@ function TreeToggle({
       {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
     </button>
   )
-}
-
-function collectActiveTreeKeys(spaces: SpaceTreeItem[], pathname: string): string[] {
-  const keys: string[] = []
-  walk(spaces, pathname, keys)
-  return keys
-}
-
-function walk(nodes: SpaceTreeItem[], pathname: string, keys: string[]): void {
-  for (const space of nodes) {
-    if (pathname === `/spaces/${space.slug}`) keys.push(spaceKey(space.id))
-    for (const document of space.documents) {
-      if (pathname === `/documents/${document.slug}`) keys.push(spaceKey(space.id))
-    }
-    for (const category of space.categories) {
-      for (const document of category.documents) {
-        if (pathname === `/documents/${document.slug}`) {
-          keys.push(spaceKey(space.id), categoryKey(category.id))
-        }
-      }
-    }
-    if (space.children.length > 0) walk(space.children, pathname, keys)
-  }
 }
 
 function spaceKey(id: string) {

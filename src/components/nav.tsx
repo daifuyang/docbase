@@ -26,16 +26,14 @@ type Me = {
 } | null
 type SidebarTag = { name: string; slug: string }
 type SidebarSpace = Parameters<typeof SidebarContent>[0]['spaces']
-type SidebarExpandedKeys = Parameters<typeof SidebarContent>[0]['expandedKeys']
 
 type NavProps = {
   me: Exclude<Me, null>
   tags?: SidebarTag[]
   spaces?: SidebarSpace
-  expandedKeys?: SidebarExpandedKeys
 }
 
-export function Nav({ me, tags = [], spaces = [], expandedKeys = [] }: NavProps) {
+export function Nav({ me, tags = [], spaces = [] }: NavProps) {
   const router = useRouter()
   const quickNote = useQuickNote()
 
@@ -68,7 +66,7 @@ export function Nav({ me, tags = [], spaces = [], expandedKeys = [] }: NavProps)
               </SheetTitle>
             </SheetHeader>
             <div className="min-h-0 flex-1 overflow-y-auto pr-1 scrollbar-thin">
-              <SidebarContent popularTags={tags} spaces={spaces} expandedKeys={expandedKeys} />
+              <SidebarContent popularTags={tags} spaces={spaces} />
             </div>
           </SheetContent>
         </Sheet>

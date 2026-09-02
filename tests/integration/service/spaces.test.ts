@@ -21,6 +21,7 @@ import { contextForUser } from '~/server/services/context'
 import {
   createCategoryService,
   createSpaceService,
+  deleteCategoryService,
   deleteSpaceService,
   listSpaceTreeService,
   updateCategoryService,
@@ -41,6 +42,7 @@ describe('spaces + categories service layer', () => {
   const targetSpaceName = `Test Target Space ${tag}`
   const sourceSpaceName = `Test Source Space ${tag}`
   const categoryName = `Test Category ${tag}`
+  const emptyCategoryName = `Test Empty Category ${tag}`
   const parentSpaceName = `Test Parent Space ${tag}`
   const childSpaceName = `Test Child Space ${tag}`
   const grandchildSpaceName = `Test Grandchild Space ${tag}`
@@ -48,6 +50,7 @@ describe('spaces + categories service layer', () => {
   let targetSpaceId = ''
   let sourceSpaceId = ''
   let categoryId = ''
+  let emptyCategoryId = ''
   let documentId = ''
   let emptySpaceId = ''
   let parentSpaceId = ''
@@ -92,6 +95,11 @@ describe('spaces + categories service layer', () => {
       name: categoryName,
     })
     categoryId = cat.category.id
+    const emptyCategory = await createCategoryService(ctx, {
+      spaceId: sourceSpaceId,
+      name: emptyCategoryName,
+    })
+    emptyCategoryId = emptyCategory.category.id
 
     const inserted = await db
       .insert(schema.document)
@@ -132,6 +140,9 @@ describe('spaces + categories service layer', () => {
   afterAll(async () => {
     if (documentId) {
       await db.delete(schema.document).where(eq(schema.document.id, documentId))
+    }
+    if (emptyCategoryId) {
+      await db.delete(schema.category).where(eq(schema.category.id, emptyCategoryId))
     }
     if (categoryId) {
       await db.delete(schema.category).where(eq(schema.category.id, categoryId))
@@ -193,6 +204,23 @@ describe('spaces + categories service layer', () => {
         spaceId: '00000000-0000-0000-0000-000000000000',
       }),
     ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+  })
+
+  it('deleteCategoryService removes an empty category', async () => {
+    const result = await deleteCategoryService(ctx, { id: emptyCategoryId })
+    expect(result).toEqual({ ok: true, deletedCategoryId: emptyCategoryId })
+    const gone = await db.query.category.findFirst({
+      where: eq(schema.category.id, emptyCategoryId),
+    })
+    expect(gone).toBeUndefined()
+    emptyCategoryId = ''
+  })
+
+  it('deleteCategoryService refuses with CONFLICT when documents still exist', async () => {
+    await expect(deleteCategoryService(ctx, { id: categoryId })).rejects.toMatchObject({
+      code: 'CONFLICT',
+      details: expect.objectContaining({ remainingDocuments: expect.any(Number) }),
+    })
   })
 
   it('deleteSpaceService refuses with CONFLICT when categories still exist', async () => {

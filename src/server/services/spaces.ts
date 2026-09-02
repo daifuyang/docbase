@@ -12,7 +12,11 @@ const NAV_EXPANDED_KEY = 'navigation.expanded'
 type DbSpaceRow = typeof schema.space.$inferSelect
 
 export async function listSpacesService(_ctx: ServiceContext): Promise<{ items: SpaceSummary[] }> {
-  const rows = await db.select().from(schema.space).orderBy(asc(schema.space.sortOrder))
+  const rows = await db
+    .select()
+    .from(schema.space)
+    .where(eq(schema.space.hidden, false))
+    .orderBy(asc(schema.space.sortOrder))
   return { items: rows.map((row) => toSpaceSummary(row)) }
 }
 
@@ -81,6 +85,15 @@ export async function listSpaceTreeService(
     childrenByParent.set(space.parentId, bucket)
   }
 
+  // Prune hidden spaces from the tree. A hidden space is excluded directly,
+  // and any space whose parent is hidden becomes unreachable and is dropped
+  // too (its parent is no longer in the visible set).
+  const visibleSpaces = spaces.filter((space) => !space.hidden)
+  const visibleIds = new Set(visibleSpaces.map((space) => space.id))
+  const treeSpaces = visibleSpaces.filter(
+    (space) => space.parentId === null || visibleIds.has(space.parentId),
+  )
+
   function buildNode(space: DbSpaceRow): SpaceTreeItem {
     const spaceDocs = docsBySpace.get(space.id) ?? []
     const spaceCategories = categoriesBySpace.get(space.id) ?? []
@@ -103,7 +116,7 @@ export async function listSpaceTreeService(
     }
   }
 
-  const roots = spaces.filter((space) => space.parentId === null)
+  const roots = treeSpaces.filter((space) => space.parentId === null)
   return { items: roots.map(buildNode) }
 }
 
@@ -378,6 +391,37 @@ export async function updateCategoryService(
       description: next.description,
     },
   }
+}
+
+/**
+ * Delete an empty category. Documents must be moved to the space root (or a
+ * different category) first, so category cleanup cannot silently discard
+ * content.
+ */
+export async function deleteCategoryService(
+  ctx: ServiceContext,
+  input: { id: string },
+): Promise<{ ok: true; deletedCategoryId: string }> {
+  await requireAdmin(ctx)
+
+  const existing = await db.query.category.findFirst({ where: eq(schema.category.id, input.id) })
+  if (!existing) throw Errors.notFound('分类不存在')
+
+  const attached = await db
+    .select({ id: schema.document.id, title: schema.document.title })
+    .from(schema.document)
+    .where(eq(schema.document.categoryId, input.id))
+    .limit(5)
+
+  if (attached.length > 0) {
+    throw Errors.conflict('该分类下仍有文档，请先迁移文档', {
+      remainingDocuments: attached.length,
+      sampleDocumentIds: attached.map((document) => document.id),
+    })
+  }
+
+  await db.delete(schema.category).where(eq(schema.category.id, input.id))
+  return { ok: true, deletedCategoryId: input.id }
 }
 
 /**

@@ -518,6 +518,37 @@ export const docbaseOpenApiSpec = {
           '404': { description: 'Category or target space not found' },
         },
       },
+      delete: {
+        operationId: 'categories.delete',
+        tags: ['categories'],
+        summary: 'Delete an empty category by id',
+        description:
+          'Refuses deletion when documents remain. Move documents to the space root by setting categoryId to null, or to another category, first.',
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          '200': {
+            description: 'Deleted',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['ok', 'deletedCategoryId'],
+                  properties: {
+                    ok: { type: 'boolean', example: true },
+                    deletedCategoryId: { type: 'string', format: 'uuid' },
+                  },
+                },
+              },
+            },
+          },
+          '401': { description: 'Unauthenticated' },
+          '403': { description: 'Not an admin' },
+          '404': { description: 'Category not found' },
+          '409': { description: 'Category still has documents' },
+        },
+      },
     },
     '/api/v1/tags': {
       get: {
