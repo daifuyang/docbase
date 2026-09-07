@@ -1,9 +1,9 @@
-import { createFileRoute, redirect, useRouter } from '@tanstack/react-router'
-import { FolderOpen, Layers3, ShieldCheck, UserPlus, Users } from 'lucide-react'
+import { Link, createFileRoute, redirect, useRouter } from '@tanstack/react-router'
+import { ChevronRight, FolderOpen, Layers3, ShieldCheck, UserPlus, Users } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useState, useTransition } from 'react'
 import { createMember, listMembers } from '~/server/auth'
-import { createCategory, createSpace, listCategories, listSpaces } from '~/server/spaces'
+import { listCategories, listSpaces } from '~/server/spaces'
 
 export const Route = createFileRoute('/_protected/admin')({
   beforeLoad: async ({ context }) => {
@@ -81,7 +81,13 @@ function AdminPage() {
                   <div key={space.id} className="px-4 py-3">
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
-                        <div className="truncate text-sm font-medium">{space.name}</div>
+                        <Link
+                          to="/spaces/$slug"
+                          params={{ slug: space.slug }}
+                          className="truncate text-sm font-medium hover:text-primary"
+                        >
+                          {space.name}
+                        </Link>
                         {space.description && (
                           <div className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
                             {space.description}
@@ -113,8 +119,8 @@ function AdminPage() {
 
         <aside className="space-y-4">
           <CreateMemberPanel />
-          <CreateSpacePanel />
-          <CreateCategoryPanel spaces={spaces} />
+          {/* 空间/分类的创建入口已统一到侧边栏与空间页右上角的「+ 新建」下拉，admin 页面里只保留这两个跳转引导，避免维护两套表单。 */}
+          <StructureShortcutPanel spaces={spaces} />
         </aside>
       </div>
     </div>
@@ -224,91 +230,37 @@ function CreateMemberPanel() {
   )
 }
 
-function CreateSpacePanel() {
-  const router = useRouter()
-  const [error, setError] = useState('')
-  const [pending, startTransition] = useTransition()
-
+/**
+ * Replaces the old inline "create space" / "create category" forms. The
+ * actual creation lives in the sidebar "+" menu and the space page "+"
+ * dropdown — both of which can target any space the admin is currently
+ * looking at. We keep the member-creation form here because it has no
+ * equivalent surface elsewhere.
+ */
+function StructureShortcutPanel({
+  spaces,
+}: {
+  spaces: Array<{ id: string; slug: string; name: string }>
+}) {
   return (
-    <Panel icon={<FolderOpen className="h-4 w-4" />} title="创建空间">
-      <form
-        className="space-y-2"
-        onSubmit={(event) => {
-          event.preventDefault()
-          const form = new FormData(event.currentTarget)
-          setError('')
-          startTransition(async () => {
-            try {
-              await createSpace({
-                data: {
-                  name: String(form.get('name') ?? ''),
-                  description: String(form.get('description') ?? '') || undefined,
-                },
-              })
-              event.currentTarget.reset()
-              await router.invalidate()
-            } catch (err) {
-              setError(err instanceof Error ? err.message : '创建失败')
-            }
-          })
-        }}
-      >
-        <Field name="name" placeholder="空间名称" required />
-        <Field name="description" placeholder="空间说明" />
-        {error && <p className="text-xs text-destructive">{error}</p>}
-        <SubmitButton pending={pending}>创建空间</SubmitButton>
-      </form>
-    </Panel>
-  )
-}
-
-function CreateCategoryPanel({ spaces }: { spaces: Array<{ id: string; name: string }> }) {
-  const router = useRouter()
-  const [error, setError] = useState('')
-  const [pending, startTransition] = useTransition()
-
-  return (
-    <Panel icon={<Layers3 className="h-4 w-4" />} title="创建分类">
-      <form
-        className="space-y-2"
-        onSubmit={(event) => {
-          event.preventDefault()
-          const form = new FormData(event.currentTarget)
-          setError('')
-          startTransition(async () => {
-            try {
-              await createCategory({
-                data: {
-                  spaceId: String(form.get('spaceId') ?? ''),
-                  name: String(form.get('name') ?? ''),
-                  description: String(form.get('description') ?? '') || undefined,
-                },
-              })
-              event.currentTarget.reset()
-              await router.invalidate()
-            } catch (err) {
-              setError(err instanceof Error ? err.message : '创建失败')
-            }
-          })
-        }}
-      >
-        <select
-          name="spaceId"
-          required
-          className="h-9 w-full cursor-pointer rounded-md border border-input bg-transparent px-3 text-sm transition-colors hover:border-primary/50 focus:border-primary focus:outline-none"
-        >
-          <option value="">选择空间</option>
-          {spaces.map((space) => (
-            <option key={space.id} value={space.id}>
-              {space.name}
-            </option>
-          ))}
-        </select>
-        <Field name="name" placeholder="分类名称" required />
-        <Field name="description" placeholder="分类说明" />
-        {error && <p className="text-xs text-destructive">{error}</p>}
-        <SubmitButton pending={pending}>创建分类</SubmitButton>
-      </form>
+    <Panel icon={<Layers3 className="h-4 w-4" />} title="空间与分类">
+      <p className="text-xs text-muted-foreground">
+        创建空间或分类请进入对应空间页，使用右上角「+
+        新建」下拉。也可以从左侧栏「知识空间」标题旁的「+」直接新建顶级空间。
+      </p>
+      <div className="mt-3 max-h-72 space-y-1 overflow-y-auto pr-1">
+        {spaces.map((space) => (
+          <Link
+            key={space.id}
+            to="/spaces/$slug"
+            params={{ slug: space.slug }}
+            className="flex items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-secondary"
+          >
+            <span className="truncate">{space.name}</span>
+            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          </Link>
+        ))}
+      </div>
     </Panel>
   )
 }

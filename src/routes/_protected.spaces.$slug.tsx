@@ -1,6 +1,7 @@
 import { Link, createFileRoute, notFound } from '@tanstack/react-router'
 import { ChevronRight, FolderOpen } from 'lucide-react'
 import { z } from 'zod'
+import { CreateMenu } from '~/components/create-menu'
 import { DocumentCard } from '~/components/document-card'
 import { listDocuments } from '~/server/documents'
 import { listCategoriesBySpace, listSpaces } from '~/server/spaces'
@@ -35,6 +36,9 @@ export const Route = createFileRoute('/_protected/spaces/$slug')({
 
 function SpacePage() {
   const { space, categories, category, documents } = Route.useLoaderData()
+  const { me } = Route.useRouteContext()
+  const isAdmin = me.role === 'admin'
+
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 2xl:px-8">
       <nav className="mb-4 flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -46,16 +50,24 @@ function SpacePage() {
       </nav>
 
       <header className="mb-5 border-b border-border pb-5">
-        <div className="flex items-center gap-3">
-          <span className="flex h-9 w-9 items-center justify-center rounded-md bg-secondary text-muted-foreground">
+        <div className="flex items-start gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-secondary text-muted-foreground">
             <FolderOpen className="h-[18px] w-[18px]" />
           </span>
-          <div>
+          <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-semibold tracking-tight">{space.name}</h1>
             {space.description && (
               <p className="mt-0.5 text-sm text-muted-foreground">{space.description}</p>
             )}
           </div>
+          <CreateMenu
+            context={{ kind: 'space', spaceId: space.id, spaceName: space.name }}
+            canManageStructure={isAdmin}
+            variant="labelled"
+            newDocumentTo="/documents/new"
+            newDocumentSearch={{ spaceId: space.id }}
+            className="shrink-0"
+          />
         </div>
         {categories.length > 0 && (
           <div className="mt-5 flex flex-wrap gap-2">

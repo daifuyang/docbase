@@ -12,6 +12,7 @@ import {
   Plus,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { CreateMenu } from '~/components/create-menu'
 import { useNavigationTree } from '~/lib/navigation-tree-state'
 import { cn } from '~/lib/utils'
 import type { SpaceTreeItem } from '~/shared/types'
@@ -21,17 +22,38 @@ type Props = {
   spaces?: SpaceTreeItem[]
   className?: string
   contentClassName?: string
+  /**
+   * Whether the current user can manage space/category structure. Drives
+   * which entries show up in the sidebar's "+" menu. Falls back to false.
+   */
+  canManageStructure?: boolean
 }
 
-export function Sidebar({ popularTags = [], spaces = [], className, contentClassName }: Props) {
+export function Sidebar({
+  popularTags = [],
+  spaces = [],
+  className,
+  contentClassName,
+  canManageStructure = false,
+}: Props) {
   return (
     <aside className={cn('w-64 shrink-0', className)}>
-      <SidebarContent popularTags={popularTags} spaces={spaces} className={contentClassName} />
+      <SidebarContent
+        popularTags={popularTags}
+        spaces={spaces}
+        className={contentClassName}
+        canManageStructure={canManageStructure}
+      />
     </aside>
   )
 }
 
-export function SidebarContent({ popularTags = [], spaces = [], className }: Props) {
+export function SidebarContent({
+  popularTags = [],
+  spaces = [],
+  className,
+  canManageStructure = false,
+}: Props) {
   // Expansion state is owned by the shared NavigationTreeProvider so the
   // desktop sidebar and the mobile drawer render one consistent tree instead
   // of two copies that overwrite each other's persisted snapshot.
@@ -57,14 +79,12 @@ export function SidebarContent({ popularTags = [], spaces = [], className }: Pro
             <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               知识空间
             </div>
-            <Link
-              to="/documents/new"
-              className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
-              title="新建文档"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span className="sr-only">新建文档</span>
-            </Link>
+            {/* "+" 三选项：文档（始终）/ 文件夹 / 空间（仅管理员）。 */}
+            <CreateMenu
+              context={{ kind: 'sidebar' }}
+              canManageStructure={canManageStructure}
+              newDocumentTo="/documents/new"
+            />
           </div>
           {spaces.map((space) => (
             <TreeSpace
