@@ -114,17 +114,5 @@
     "*.{ts,tsx,js,jsx,json,md}": [
       "biome check --write"
     ]
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@biomejs/biome",
-      "@parcel/watcher",
-      "@scarf/scarf",
-      "@tree-sitter-grammars/tree-sitter-yaml",
-      "core-js-pure",
-      "esbuild",
-      "tree-sitter",
-      "tree-sitter-json"
-    ]
   }
 }
