@@ -3,7 +3,7 @@
 import { useNavigate } from '@tanstack/react-router'
 import { CheckCircle2, FileText, FolderOpen, Save, Send, Tags } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { Suspense, lazy, useMemo, useState, useTransition } from 'react'
+import { Suspense, lazy, useState, useTransition } from 'react'
 import { TagInput } from '~/components/tag-input'
 import { freezeAggregates } from '~/lib/table-aggregate'
 import { cn } from '~/lib/utils'
@@ -50,16 +50,16 @@ export function DocumentForm({
     initial?.contentJson ?? { type: 'doc', content: [] },
   )
   const [tags, setTags] = useState<string[]>(initial?.tags ?? [])
-  const [spaceId, setSpaceId] = useState(initial?.spaceId ?? initialSpaceId ?? spaces[0]?.id ?? '')
-  const [categoryId, setCategoryId] = useState(initial?.categoryId ?? initialCategoryId ?? '')
+  // `spaceId` / `categoryId` are still owned here because they are part of the
+  // create/update payload. The form no longer lets the user edit them inline —
+  // the "保存位置" panel shows the current target and defers picking to the
+  // dedicated location picker.
+  const [spaceId] = useState(initial?.spaceId ?? initialSpaceId ?? spaces[0]?.id ?? '')
+  const [categoryId] = useState(initial?.categoryId ?? initialCategoryId ?? '')
   const [error, setError] = useState<string | null>(null)
   const [pendingAction, setPendingAction] = useState<'draft' | 'published' | null>(null)
   const [pending, startTransition] = useTransition()
 
-  const filteredCategories = useMemo(
-    () => categories.filter((category) => !spaceId || category.spaceId === spaceId),
-    [categories, spaceId],
-  )
   const selectedSpace = spaces.find((space) => space.id === spaceId)
   const selectedCategory = categories.find((category) => category.id === categoryId)
 
@@ -186,46 +186,32 @@ export function DocumentForm({
         <section className="rounded-lg border border-border bg-surface p-4">
           <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold">
             <FolderOpen className="h-4 w-4" />
-            知识归属
+            保存位置
           </h2>
-          <label className="space-y-1.5 text-sm font-medium">
-            <span>空间</span>
-            <select
-              value={spaceId}
-              onChange={(event) => {
-                setSpaceId(event.target.value)
-                setCategoryId('')
-              }}
-              className="h-10 w-full cursor-pointer rounded-md border border-input bg-transparent px-3 text-sm transition-colors hover:border-primary/50 focus:border-primary focus:outline-none"
-            >
-              <option value="">请选择知识空间</option>
-              {spaces.map((space) => (
-                <option key={space.id} value={space.id}>
-                  {space.name}
-                </option>
-              ))}
-            </select>
-          </label>
 
-          <label className="mt-3 block space-y-1.5 text-sm font-medium">
-            <span>分类</span>
-            <select
-              value={categoryId}
-              onChange={(event) => setCategoryId(event.target.value)}
-              className="h-10 w-full cursor-pointer rounded-md border border-input bg-transparent px-3 text-sm transition-colors hover:border-primary/50 focus:border-primary focus:outline-none"
+          {/*
+            "保存位置" replaces the old space + category pair. Folders now own
+            organisation and tags own retrieval, so surfacing a third hierarchy
+            here would just give users two competing ways to file a document.
+            The underlying space/category values are untouched — this section is
+            presentation only at this stage, and the location picker lands later.
+          */}
+          <div className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2">
+            <div className="flex min-w-0 items-center gap-2 text-sm">
+              <FolderOpen className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span className="truncate">
+                {selectedSpace?.name ?? '未选择知识空间'}
+                {selectedCategory ? (
+                  <span className="text-muted-foreground"> / {selectedCategory.name}</span>
+                ) : null}
+              </span>
+            </div>
+            <button
+              type="button"
+              className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-accent"
             >
-              <option value="">不选择分类</option>
-              {filteredCategories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div className="mt-3 rounded-md bg-surface-muted px-3 py-2 text-xs text-muted-foreground">
-            {selectedSpace?.name ?? '未选择空间'}
-            {selectedCategory ? ` / ${selectedCategory.name}` : ''}
+              更改位置
+            </button>
           </div>
         </section>
 
