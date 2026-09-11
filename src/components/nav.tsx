@@ -66,11 +66,7 @@ export function Nav({ me, tags = [], spaces = [] }: NavProps) {
               </SheetTitle>
             </SheetHeader>
             <div className="min-h-0 flex-1 overflow-y-auto pr-1 scrollbar-thin">
-              <SidebarContent
-                popularTags={tags}
-                spaces={spaces}
-                canManageStructure={me?.role === 'admin'}
-              />
+              <SidebarContent popularTags={tags} spaces={spaces} />
             </div>
           </SheetContent>
         </Sheet>
